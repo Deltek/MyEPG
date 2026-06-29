@@ -18,14 +18,14 @@ from handlers_admin import (
 )
 from handlers_public import (
     start, aide, maintenant, soir, prime, demain, nuit,
-    film, series, sport, live, nouveautes,
+    film, series, sport, sporttnt, live, nouveautes,
     resume, soir5, doublons, trending, chaine, chaines, recherche,
     get_id
 )
 from callbacks import (
     callback_maintenant_country, callback_maintenant_chaine,
     callback_maintenant_all, callback_soir, callback_film,
-    callback_series, callback_sport, callback_nouveautes_day,
+    callback_series, callback_sport, callback_sporttnt, callback_nouveautes_day,
     callback_nouveautes, callback_list_chaines,
     callback_search_country, callback_search_page,
     callback_prime, callback_nuit, callback_admin_logs
@@ -68,6 +68,7 @@ def main():
     app.add_handler(CommandHandler("film",       film))
     app.add_handler(CommandHandler("series",     series))
     app.add_handler(CommandHandler("sport",      sport))
+    app.add_handler(CommandHandler("sporttnt",   sporttnt))
     app.add_handler(CommandHandler("live",       live))
     app.add_handler(CommandHandler("nouveautes", nouveautes))
     app.add_handler(CommandHandler("resume",     resume))
@@ -107,6 +108,7 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_film,               pattern=r"^film:"))
     app.add_handler(CallbackQueryHandler(callback_series,             pattern=r"^series:"))
     app.add_handler(CallbackQueryHandler(callback_sport,              pattern=r"^sport_"))
+    app.add_handler(CallbackQueryHandler(callback_sporttnt,           pattern=r"^sporttnt:"))
     app.add_handler(CallbackQueryHandler(callback_nouveautes_day,     pattern=r"^nouveautes_day:"))
     app.add_handler(CallbackQueryHandler(callback_nouveautes,         pattern=r"^nouveautes:"))
     app.add_handler(CallbackQueryHandler(callback_list_chaines,       pattern=r"^list:"))

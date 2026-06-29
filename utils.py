@@ -133,6 +133,18 @@ def is_serie(prog_elem) -> bool:
         return True
     return _has_episode(prog_elem)
 
+def is_sport(prog_elem) -> bool:
+    """Détecte si un programme est du sport (par catégorie EPG)."""
+    cats = [c.text.lower() for c in prog_elem.findall("category") if c.text]
+    return any(
+        "sport" in c or c in {
+            "football", "rugby", "tennis", "cyclisme", "natation",
+            "handball", "basketball", "volleyball", "golf", "boxe",
+            "hockey", "motorsport", "athlétisme", "athletisme",
+        }
+        for c in cats
+    )
+
 def is_film(prog_elem) -> bool:
     """Détecte si un programme est un film."""
     cats = [c.text.lower() for c in prog_elem.findall("category") if c.text]
