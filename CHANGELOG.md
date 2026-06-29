@@ -5,6 +5,13 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.2.2] - 2026-06-29
+
+### Fixed
+- Commandes publiques désormais visibles en premier dans le menu admin (BotFather scope)
+
+---
+
 ## [1.2.1] - 2026-06-29
 
 ### Fixed
