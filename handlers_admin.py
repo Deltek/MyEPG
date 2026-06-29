@@ -26,8 +26,7 @@ import requests
 # ──────────────────────────────────────────
 async def post_init(app: Application) -> None:
     """Configure les commandes du bot au démarrage."""
-    # Commandes publiques
-    await app.bot.set_my_commands([
+    cmds_publiques = [
         BotCommand("maintenant",  "En ce moment sur les chaînes"),
         BotCommand("soir",        "Programme de la soirée TNT FR"),
         BotCommand("prime",       "Prime time 20h–22h30"),
@@ -46,11 +45,14 @@ async def post_init(app: Application) -> None:
         BotCommand("chaines",     "Parcourir toutes les chaînes"),
         BotCommand("recherche",   "Rechercher un programme"),
         BotCommand("aide",        "Afficher l'aide"),
-    ])
+    ]
 
-    # Commandes admin (si ADMIN_USER_ID est défini)
+    # Commandes publiques (tous les utilisateurs)
+    await app.bot.set_my_commands(cmds_publiques)
+
+    # Commandes admin : publiques d'abord, puis admin (si ADMIN_USER_ID est défini)
     if ADMIN_USER_ID:
-        await app.bot.set_my_commands([
+        await app.bot.set_my_commands(cmds_publiques + [
             BotCommand("admin",             "Panneau admin 🔧"),
             BotCommand("status",            "Vue synthétique 📊"),
             BotCommand("ping",              "Latence 🏓"),
