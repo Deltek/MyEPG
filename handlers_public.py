@@ -52,7 +52,7 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
         now      = datetime.now(tz=timezone.utc)
         channels = get_channels(root)
         nom      = clean_name(channels.get(cid, cid))
-        progs    = get_programmes_for_channel(root, cid, limit=10)
+        progs    = get_programmes_for_channel(root, cid, limit=10, country=country)
         current  = next((p for p in progs if p["start"] <= now < p["stop"]), None)
         nxt      = next((p for p in progs if p["start"] > now), None)
         if not current:
@@ -229,7 +229,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
         channels = get_channels(root)
         texte    = f"📋 *Résumé – TNT FR*\n🕐 {now.astimezone(TZ_PARIS).strftime('%H:%M')}\n\n"
         for cid in CH_TNT_FR:
-            progs   = get_programmes_for_channel(root, cid, limit=5)
+            progs   = get_programmes_for_channel(root, cid, limit=5, country="fr")
             current = next((p for p in progs if p["start"] <= now < p["stop"]), None)
             if not current:
                 continue
@@ -368,7 +368,7 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
         root     = await load_epg(country)
         channels = get_channels(root)
         nom      = clean_name(channels.get(cid, cid))
-        progs    = get_programmes_for_channel(root, cid, limit=8)
+        progs    = get_programmes_for_channel(root, cid, limit=8, country=country)
         now      = datetime.now(tz=timezone.utc)
         if not progs:
             await msg.edit_text(f"❌ Aucun programme pour *{sanitize_md(nom)}*\\.", parse_mode="MarkdownV2")

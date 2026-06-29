@@ -50,7 +50,7 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
         channels = get_channels(root)
         texte    = f"📡 *En ce moment – {EPG_SOURCES[country]['label']}*\n\n"
         for cid in EPG_SOURCES[country]["vedettes"]:
-            progs   = get_programmes_for_channel(root, cid, limit=10)
+            progs   = get_programmes_for_channel(root, cid, limit=10, country=country)
             current = next((p for p in progs if p["start"] <= now < p["stop"]), None)
             nxt     = next((p for p in progs if p["start"] > now), None)
             nom     = clean_name(channels.get(cid, cid))
@@ -136,7 +136,7 @@ async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         ch_list           = CH_SPORT_BY_COUNTRY.get(pays, CH_SPORT_FR)
         root              = await load_epg(pays)
-        results, jour_label, now_utc = build_sport_results(root, day_offset, ch_list)
+        results, jour_label, now_utc = build_sport_results(root, day_offset, ch_list, country=pays)
         flag              = EPG_SOURCES[pays]["label"]
         await send_type_blocs(
             results, jour_label, now_utc,
@@ -263,7 +263,7 @@ async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text("⏳ Chargement du prime time…")
     try:
         root              = await load_epg(pays)
-        results, jour_label, now_utc = build_prime_results(root, day_offset)
+        results, jour_label, now_utc = build_prime_results(root, day_offset, country=pays)
         flag              = EPG_SOURCES[pays]["label"]
         await send_type_blocs(
             results, jour_label, now_utc,
