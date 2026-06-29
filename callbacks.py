@@ -140,7 +140,7 @@ async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
         flag              = EPG_SOURCES[pays]["label"]
         await send_type_blocs(
             results, jour_label, now_utc,
-            header=f"⚽ *Sport – {flag}*",
+            header=f"⚽ *Sport – {flag}* — {len(results)} programme\\(s\\)",
             edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
             ch_order_list=ch_list,
