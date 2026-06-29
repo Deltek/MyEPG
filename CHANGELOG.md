@@ -5,6 +5,14 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- 49 tests unitaires pytest couvrant `utils.py` et `epg_query.py`
+- GitHub Actions CI : pipeline de tests automatique sur push/PR vers `main` et `develop`
+
+---
+
 ## [1.1] - 2026-06-29
 
 ### Added
