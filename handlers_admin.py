@@ -19,7 +19,6 @@ from logger_utils import logger, get_mem_handler
 from utils import sanitize_md, clean_name, _strip_accents
 from epg_loader import load_epg, get_cache, get_cache_prev, reset_cache
 import xml.etree.ElementTree as ET
-import requests
 
 # ──────────────────────────────────────────
 # POST_INIT — Enregistrement des commandes

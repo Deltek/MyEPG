@@ -70,7 +70,6 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
         await query.edit_message_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur callback_maintenant_all")
-        logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
