@@ -9,6 +9,14 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.8.0] - 2026-06-29
+
+### Fixed
+- `/sport` : l'en-tête affiche désormais le nombre de programmes trouvés (#24)
+- `/chaine` : suggestions fuzzy via `difflib` si le nom saisi est inconnu (#25)
+
+---
+
 ## [1.7.0] - 2026-06-29
 
 ### Added

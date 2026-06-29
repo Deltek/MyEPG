@@ -357,8 +357,19 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     nom_saisi = " ".join(context.args)
     cid       = get_ch_id_by_name(nom_saisi)
     if not cid:
+        import difflib
+        from config import CH_ALIASES
+        suggestions = difflib.get_close_matches(
+            nom_saisi.lower().strip(), CH_ALIASES.keys(), n=5, cutoff=0.5
+        )
+        if not suggestions:
+            suggestions = [k for k in CH_ALIASES if k.startswith(nom_saisi.lower().strip()[:2])][:5]
+        hint = (
+            f"\nSuggestions : {', '.join(sanitize_md(s) for s in suggestions)}"
+            if suggestions else "\nEx: tf1, m6, arte, bbc1…"
+        )
         await update.message.reply_text(
-            f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\.\nEx: tf1, m6, arte, bbc1…",
+            f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\." + hint,
             parse_mode="MarkdownV2"
         )
         return
