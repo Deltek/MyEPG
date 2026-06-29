@@ -9,6 +9,14 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.7.0] - 2026-06-29
+
+### Added
+- 13 tests unitaires pour `builders.py` : fenêtres horaires, filtres fillers, nouveautés, sport, live en cours (#26)
+- 11 tests unitaires pour `senders.py` : blocs vides, débordement multi-messages, tags inédits (#27)
+
+---
+
 ## [1.6.0] - 2026-06-29
 
 ### Changed
