@@ -12,7 +12,10 @@ from config import EPG_SOURCES, TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUN
 from utils import sanitize_md, clean_name, _normalize, _strip_accents, parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories, duree_str, is_film, is_serie, is_nouveautes_filler
 from epg_loader import load_epg
 from epg_query import get_programmes_for_channel
-from builders import build_soir_results, build_type_results, build_sport_results
+from builders import (
+    build_soir_results, build_type_results, build_sport_results,
+    build_nouveautes_tnt, build_prime_results, build_nuit_results
+)
 from senders import send_soir_blocs, send_type_blocs
 from keyboards import chaines_rapides_keyboard
 from logger_utils import logger
@@ -153,7 +156,6 @@ async def callback_nouveautes_day(update: Update, context: ContextTypes.DEFAULT_
     )
 
 async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from builders import _time_window
     query      = update.callback_query
     await query.answer()
     _, type_str, day_str = query.data.split(":")
@@ -161,49 +163,19 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.edit_message_text("⏳ Chargement des inédits…")
     try:
         if type_str == "sport":
-            ch_list           = CH_SPORT_FR
             root              = load_epg("fr")
-            results, jour_label, now_utc = build_sport_results(root, day_offset, ch_list)
+            results, jour_label, now_utc = build_sport_results(root, day_offset, CH_SPORT_FR)
             results           = [r for r in results if not is_nouveautes_filler(r["title"])]
             await send_type_blocs(
                 results, jour_label, now_utc,
                 header="🆕 *Inédits Sport*",
                 edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="Markdown", **kw),
                 send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
-                ch_order_list=ch_list,
+                ch_order_list=CH_SPORT_FR,
             )
         else:
             root              = load_epg("fr")
-            channels          = get_channels(root)
-            now_utc           = datetime.now(tz=timezone.utc)
-            start_utc, end_utc, jour_label = _time_window(day_offset, 19, 0)
-            ch_set            = set(CH_TNT_FR)
-            results           = []
-            for prog in root.findall("programme"):
-                cid = prog.get("channel", "")
-                if cid not in ch_set:
-                    continue
-                if prog.find("new") is None:
-                    continue
-                try:
-                    start = parse_xmltv_time(prog.get("start", ""))
-                    stop  = parse_xmltv_time(prog.get("stop",  ""))
-                except ValueError:
-                    continue
-                if not (start_utc <= start < end_utc):
-                    continue
-                title = clean_title(prog.findtext("title", default=""))
-                if is_nouveautes_filler(title):
-                    continue
-                desc = prog.findtext("desc") or ""
-                results.append({
-                    "start": start, "stop": stop, "title": title,
-                    "desc": clean_desc(desc, title),
-                    "channel": clean_name(channels.get(cid, cid)),
-                    "ch_id": cid, "cats": get_categories(prog),
-                    "duree": duree_str(start, stop), "new": True,
-                    "placeholder": False,
-                })
+            results, jour_label, now_utc = build_nouveautes_tnt(root, day_offset)
             await send_type_blocs(
                 results, jour_label, now_utc,
                 header="🆕 *Inédits TNT FR*",
@@ -271,3 +243,51 @@ async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.edit_message_text(f"🔍 Page {page + 1}…")
     from handlers_public import _do_recherche
     await _do_recherche(update, mot, pays, page)
+
+async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    action, day_str = query.data.split(":", 1)
+    pays       = action.split("_", 1)[1]  # "prime_fr" → "fr"
+    day_offset = int(day_str)
+    await query.edit_message_text("⏳ Chargement du prime time…")
+    try:
+        root              = load_epg(pays)
+        results, jour_label, now_utc = build_prime_results(root, day_offset)
+        flag              = EPG_SOURCES[pays]["label"]
+        await send_type_blocs(
+            results, jour_label, now_utc,
+            header=f"🌟 *Prime time 20h–22h30 – {flag}*",
+            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="Markdown", **kw),
+            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
+        )
+    except Exception as e:
+        await query.edit_message_text(f"❌ Erreur : {e}")
+
+async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    day_offset = int(query.data.split(":", 1)[1])
+    await query.edit_message_text("⏳ Chargement de la nuit…")
+    try:
+        root              = load_epg("fr")
+        results, jour_label, now_utc = build_nuit_results(root, day_offset)
+        await send_type_blocs(
+            results, jour_label, now_utc,
+            header="🌙 *Nuit 00h–06h – TNT FR*",
+            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="Markdown", **kw),
+            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
+        )
+    except Exception as e:
+        await query.edit_message_text(f"❌ Erreur : {e}")
+
+async def callback_admin_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from config import ADMIN_USER_ID
+    from logger_utils import get_mem_handler
+    query = update.callback_query
+    if query.from_user.id != ADMIN_USER_ID:
+        await query.answer("⛔ Accès refusé.", show_alert=True)
+        return
+    await query.answer()
+    get_mem_handler().records.clear()
+    await query.edit_message_text("🗑 Logs vidés.")

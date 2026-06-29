@@ -154,40 +154,5 @@ def is_film(prog_elem) -> bool:
 
 def get_ch_id_by_name(name: str) -> str | None:
     """Trouve le channel ID à partir du nom (aliases)."""
-    name_low = name.lower().strip()
-    aliases  = {
-        "tf1": "TF1.fr", "france 2": "France2.fr", "france2": "France2.fr",
-        "f2": "France2.fr", "france 3": "France3.fr", "france3": "France3.fr",
-        "f3": "France3.fr", "france 5": "France5.fr", "france5": "France5.fr",
-        "f5": "France5.fr", "m6": "M6.fr", "arte": "Arte.fr", "c8": "C8.fr",
-        "w9": "W9.fr", "tmc": "TMC.fr", "tfx": "TFX.fr",
-        "nrj12": "NRJ12.fr", "nrj 12": "NRJ12.fr", "lcp": "LCP.fr",
-        "france 4": "France4.fr", "france4": "France4.fr", "f4": "France4.fr",
-        "bfm": "BFMTV.fr", "bfmtv": "BFMTV.fr", "cnews": "CNews.fr",
-        "cstar": "CStar.fr", "gulli": "Gulli.fr",
-        "tf1sf": "TF1Series-Films.fr", "tf1 séries": "TF1Series-Films.fr",
-        "l'equipe": "L'Equipe.fr", "lequipe": "L'Equipe.fr",
-        "6ter": "6ter.fr", "rmc story": "RMCSTORY.fr", "rmcstory": "RMCSTORY.fr",
-        "rmc découverte": "RMCDecouverte.fr", "rmcd": "RMCDecouverte.fr",
-        "chérie 25": "Cherie25.fr", "cherie25": "Cherie25.fr", "lci": "LCI.fr",
-        "france info": "franceinfo.fr", "franceinfo": "franceinfo.fr",
-        "paris première": "ParisPremiere.fr", "paris1ere": "ParisPremiere.fr",
-        "rtl9": "RTL9.fr", "eurosport": "EUROSPORT1.fr",
-        "eurosport 1": "EUROSPORT1.fr", "eurosport1": "EUROSPORT1.fr",
-        "eurosport 2": "EUROSPORT2.fr", "eurosport2": "EUROSPORT2.fr",
-        "bein 1": "beINSPORTS1.fr", "bein1": "beINSPORTS1.fr",
-        "bein 2": "beINSPORTS2.fr", "bein2": "beINSPORTS2.fr",
-        "bein 3": "beINSPORTS3.fr", "bein3": "beINSPORTS3.fr",
-        "rmc sport": "RMCSport1.fr", "rmc sport 1": "RMCSport1.fr",
-        "rmc sport 2": "RMCSport2.fr", "kombat": "KombatSport.fr",
-        "equidia": "Equidia.fr", "ol tv": "OLTV.fr", "oltv": "OLTV.fr",
-        "golfe tv": "GolfeTV.fr", "golfe": "GolfeTV.fr",
-        "bbc1": "BBC1.uk", "bbc 1": "BBC1.uk", "bbc2": "BBC2.uk", "bbc 2": "BBC2.uk",
-        "itv": "ITV.uk", "channel 4": "Channel4.uk", "channel4": "Channel4.uk",
-        "channel 5": "Channel5.uk", "channel5": "Channel5.uk",
-        "e4": "E4.uk", "film4": "Film4.uk", "dave": "Dave.uk",
-        "sky sports": "SkySportsMainEvent.uk", "sky f1": "SkySportsF1.uk",
-        "tnt sports": "TNTSports1.uk", "tnt sports 1": "TNTSports1.uk",
-        "tnt sports 2": "TNTSports2.uk",
-    }
-    return aliases.get(name_low)
+    from config import CH_ALIASES
+    return CH_ALIASES.get(name.lower().strip())
