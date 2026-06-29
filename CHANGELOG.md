@@ -13,6 +13,7 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 ### Changed
 - `/aide` reorganisée par catégorie (Maintenant, Soirée, Genre, Recherche, Tendances)
 - Erreurs internes loggées et masquées à l'utilisateur (message générique)
+- Migration MarkdownV2 : tous les messages Telegram passent en `parse_mode="MarkdownV2"` — formatage plus fiable, caractères spéciaux dans les titres correctement gérés
 
 ---
 

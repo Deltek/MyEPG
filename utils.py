@@ -47,11 +47,11 @@ def _strip_accents(s: str) -> str:
         if unicodedata.category(c) != 'Mn'
     )
 
+_MD2_SPECIAL = re.compile(r'([_*\[\]()~`>#+\-=|{}.!\\])')
+
 def sanitize_md(text: str) -> str:
-    """Échappe les caractères spéciaux Markdown."""
-    for ch in ('*', '_', '`', '['):
-        text = text.replace(ch, f'\\{ch}')
-    return text
+    """Échappe les caractères spéciaux Telegram MarkdownV2."""
+    return _MD2_SPECIAL.sub(r'\\\1', text)
 
 def truncate(text: str, max_len: int = 120) -> str:
     """Tronque un texte à une longueur maximale."""
