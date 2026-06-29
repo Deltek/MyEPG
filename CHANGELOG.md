@@ -5,7 +5,7 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [1.2] - 2026-06-29
 
 ### Added
 - 49 tests unitaires pytest couvrant `utils.py` et `epg_query.py`
