@@ -9,6 +9,13 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.3.1] - 2026-06-29
+
+### Fixed
+- `epg_loader` : `httpx` ne suivait pas les redirects HTTP 302 du serveur EPG — toutes les commandes renvoyaient une erreur
+
+---
+
 ## [1.3.0] - 2026-06-29
 
 ### Added
