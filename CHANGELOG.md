@@ -15,10 +15,28 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 - 13 tests unitaires pour `builders.py` : fenêtres horaires, filtres fillers, nouveautés, sport, live en cours (#26)
 - 11 tests unitaires pour `senders.py` : blocs vides, débordement multi-messages, tags inédits (#27)
 
+---
+
+## [1.6.0] - 2026-06-29
+
 ### Changed
-- Index EPG par `channel_id` construit une fois au chargement — tous les builders passent de O(n) à O(1) par chaîne (#21, #22, #23)
-- `/resume` et `callback_maintenant_all` : plus de scan complet à chaque appel de chaîne
+- Index EPG par `channel_id` construit une fois au chargement — tous les builders passent de O(n×nb_chaînes) à O(nb_chaînes)
+- `/resume` : 27 scans O(n) → 27 lookups O(1) dans l'index
+- `/soir5` : 5 scans complets → itération directe par chaîne
 - `get_channels()` n'est plus reconstruit à chaque commande — lu depuis le cache
+- `import httpx` déplacé en lazy import dans `load_epg()` (ne casse plus les tests)
+
+---
+
+## [1.5.0] - 2026-06-29
+
+### Fixed
+- `BOT_VERSION` mis à jour `1.1` → `1.4.0` (affiché dans `/version` et `/admin`)
+- Suppression de `import requests` inutilisé dans `handlers_admin.py`
+- Suppression des doubles `logger.exception()` dans les blocs `except`
+- Pagination `/recherche` : `callback_data` ne contient plus le mot-clé — plus de risque de dépasser la limite Telegram de 64 bytes
+- Troncature des messages longs : coupure sur fin de ligne pour éviter de couper un span MarkdownV2
+- `/trending` : les émissions déjà commencées sont désormais incluses dans le comptage
 
 ---
 
