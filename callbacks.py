@@ -245,8 +245,12 @@ async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_
 async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    _, pays, mot, page_str = query.data.split(":", 3)
+    _, pays, page_str = query.data.split(":", 2)
     page = int(page_str)
+    mot  = context.user_data.get("search_mot", "")
+    if not mot:
+        await query.edit_message_text("❌ Mot\\-clé perdu\\. Relance /recherche\\.", parse_mode="MarkdownV2")
+        return
     await query.edit_message_text(f"🔍 Page {page + 1}…")
     from handlers_public import _do_recherche
     await _do_recherche(update, mot, pays, page)
