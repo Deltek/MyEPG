@@ -65,8 +65,8 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
             else:
                 texte += f"📺 *{sanitize_md(nom)}* — aucun programme\n"
             texte += "\n"
-        if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+        if len(texte) > 4000:
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await query.edit_message_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur callback_maintenant_all")

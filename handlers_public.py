@@ -327,9 +327,10 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 continue
             try:
                 start = parse_xmltv_time(prog.get("start", ""))
+                stop  = parse_xmltv_time(prog.get("stop",  ""))
             except ValueError:
                 continue
-            if not (now_utc <= start < end_utc):
+            if start >= end_utc or stop <= now_utc:
                 continue
             title = clean_title(prog.findtext("title", default=""))
             if title:
@@ -456,8 +457,8 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
         if start_i + SEARCH_PAGE_SIZE < total:
             buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{page+1}"))
         markup = InlineKeyboardMarkup([buttons]) if buttons else None
-        if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+        if len(texte) > 4000:
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await query.message.reply_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
     except Exception as e:
         logger.exception("Erreur _do_recherche")
