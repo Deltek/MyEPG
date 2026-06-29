@@ -37,7 +37,7 @@ async def load_epg(country: str) -> ET.Element:
 
         logger.info(f"Téléchargement EPG {country.upper()}…")
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
                 r = await client.get(src["url"], timeout=30)
             r.raise_for_status()
             entry["tree"]      = ET.parse(BytesIO(gzip.decompress(r.content))).getroot()
