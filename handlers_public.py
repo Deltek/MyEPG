@@ -20,7 +20,7 @@ from builders import (
     build_soir_results, build_type_results, build_sport_results,
     build_maintenant_sport, build_prime_results, build_nuit_results
 )
-from senders import send_soir_blocs, send_type_blocs
+from senders import send_soir_blocs, send_type_blocs, _SEP
 from keyboards import country_keyboard, day_keyboard, chaines_rapides_keyboard
 from logger_utils import logger
 
@@ -102,7 +102,7 @@ async def _maintenant_sport(update: Update):
             h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             ph_tag  = " ⚠️" if r.get("placeholder") else ""
             texte  += f"📺 *{sanitize_md(r['channel'])}*\n"
-            texte  += f"🔴 {h_start}–{h_stop} (reste {r['duree_reste']})  {sanitize_md(r['title'])}{ph_tag}\n"
+            texte  += f"🔴 {h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}  _(reste {r['duree_reste']})_\n"
             if r.get("desc") and not r.get("placeholder"):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
@@ -210,7 +210,7 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
             h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             ph_tag  = " ⚠️" if r.get("placeholder") else ""
             texte  += f"📺 *{sanitize_md(r['channel'])}*\n"
-            texte  += f"🔴 {h_start}–{h_stop} _(reste {r['duree_reste']})_  {sanitize_md(r['title'])}{ph_tag}\n"
+            texte  += f"🔴 {h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}  _(reste {r['duree_reste']})_\n"
             if r.get("desc") and not r.get("placeholder"):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
@@ -258,7 +258,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
         texte    = "🗓 *5 Prochains soirs – TNT FR*\n\n"
         for day_offset in range(5):
             results, _, jour_label, _ = build_soir_results(root, day_offset)
-            texte += f"━━━━━━━━━\n📅 *{jour_label}*\n"
+            texte += f"{_SEP}\n📅 *{jour_label}*\n"
             for cid in vedettes:
                 day_results = [r for r in results if r["ch_id"] == cid]
                 if not day_results:
@@ -380,7 +380,7 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
             h_stop   = p["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             en_cours = "🔴 " if p["start"] <= now < p["stop"] else ""
             new_tag  = " 🆕" if p.get("new") else ""
-            texte   += f"{en_cours}🕐 {h_start}–{h_stop}  {sanitize_md(p['title'])}{new_tag}\n"
+            texte   += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(p['title'])}{new_tag}\n"
             if p.get("desc"):
                 texte += f"   📝 {sanitize_md(p['desc'])}\n"
         await msg.edit_text(texte, parse_mode="Markdown")

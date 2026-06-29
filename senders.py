@@ -8,14 +8,16 @@ from collections import defaultdict
 from config import TZ_PARIS, CH_TNT_FR
 from utils import sanitize_md, clean_name
 
+_SEP = "━━━━━━━━━━━━━"
+
 def format_programme(prog: dict) -> str:
     """Formate un programme dict pour affichage Telegram."""
-    now     = datetime.now(tz=timezone.utc)
-    h_start = prog["start"].astimezone(TZ_PARIS).strftime("%H:%M")
-    h_stop  = prog["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
+    now      = datetime.now(tz=timezone.utc)
+    h_start  = prog["start"].astimezone(TZ_PARIS).strftime("%H:%M")
+    h_stop   = prog["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
     en_cours = "🔴 " if prog["start"] <= now < prog["stop"] else ""
     new_tag  = " 🆕" if prog.get("new") else ""
-    texte    = f"{en_cours}🕐 *{h_start}–{h_stop}*  {sanitize_md(prog['title'])}{new_tag}\n"
+    texte    = f"{en_cours}*{h_start}–{h_stop}*  {sanitize_md(prog['title'])}{new_tag}\n"
     if prog.get("cat"):
         texte += f"   📂 _{sanitize_md(prog['cat'])}_\n"
     if prog.get("desc"):
@@ -39,13 +41,13 @@ async def send_soir_blocs(results, channels, jour_label, now_utc, send_fn, edit_
         if ch_id not in grouped:
             continue
         nom     = sanitize_md(clean_name(channels.get(ch_id, ch_id)))
-        bloc_ch = f"━━━━━━━━━━━━━\n📺 *{nom}*\n"
+        bloc_ch = f"{_SEP}\n📺 *{nom}*\n"
         for r in grouped[ch_id]:
             h_start  = r["start"].astimezone(TZ_PARIS).strftime("%H:%M")
             h_stop   = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             en_cours = "🔴 " if r["start"] <= now_utc < r["stop"] else ""
             new_tag  = " 🆕" if r.get("new") else ""
-            bloc_ch += f"{en_cours}🕐 {h_start}–{h_stop}  {sanitize_md(r['title'])}{new_tag}\n"
+            bloc_ch += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(r['title'])}{new_tag}\n"
             if r.get("desc"):
                 bloc_ch += f"   📝 {sanitize_md(r['desc'])}\n"
         lines.append(bloc_ch)
@@ -89,14 +91,14 @@ async def send_type_blocs(results, jour_label, now_utc, header: str,
     lines = []
     for ch_id in ordered_ids:
         nom     = sanitize_md(grouped[ch_id][0]["channel"])
-        bloc_ch = f"━━━━━━━━━━━━━\n📺 *{nom}*\n"
+        bloc_ch = f"{_SEP}\n📺 *{nom}*\n"
         for r in grouped[ch_id]:
             h_start  = r["start"].astimezone(TZ_PARIS).strftime("%H:%M")
             h_stop   = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             en_cours = "🔴 " if r["start"] <= now_utc < r["stop"] else ""
             ph_tag   = " ⚠️" if r.get("placeholder") else ""
             new_tag  = " 🆕" if r.get("new") else ""
-            bloc_ch += f"{en_cours}🕐 {h_start}–{h_stop}  ⏱ {r['duree']}  {sanitize_md(r['title'])}{ph_tag}{new_tag}\n"
+            bloc_ch += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}{new_tag}  _{r['duree']}_\n"
             if r.get("desc") and not r.get("placeholder"):
                 bloc_ch += f"   📝 {sanitize_md(r['desc'])}\n"
         lines.append(bloc_ch)
