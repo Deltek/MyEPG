@@ -7,13 +7,17 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.3.0] - 2026-06-29
+
 ### Added
 - 12 tests unitaires pour `builders.py` (fenêtres horaires, filtres fillers, nouveautés)
 
 ### Changed
+- Migration `MarkdownV2` : tous les messages Telegram — formatage fiable même sur les titres avec caractères spéciaux
 - `/aide` reorganisée par catégorie (Maintenant, Soirée, Genre, Recherche, Tendances)
 - Erreurs internes loggées et masquées à l'utilisateur (message générique)
-- Migration MarkdownV2 : tous les messages Telegram passent en `parse_mode="MarkdownV2"` — formatage plus fiable, caractères spéciaux dans les titres correctement gérés
 
 ---
 
