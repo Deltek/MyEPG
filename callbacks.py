@@ -45,7 +45,7 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
     country = query.data.split(":", 1)[1]
     await query.edit_message_text(f"⏳ Chargement {EPG_SOURCES[country]['label']}…")
     try:
-        root     = load_epg(country)
+        root     = await load_epg(country)
         now      = datetime.now(tz=timezone.utc)
         channels = get_channels(root)
         texte    = f"📡 *En ce moment – {EPG_SOURCES[country]['label']}*\n\n"
@@ -78,7 +78,7 @@ async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
     day_offset = int(query.data.split(":", 1)[1])
     await query.edit_message_text("⏳ Chargement…")
     try:
-        root     = load_epg("fr")
+        root     = await load_epg("fr")
         results, channels, jour_label, now_utc = build_soir_results(root, day_offset)
         await send_soir_blocs(
             results, channels, jour_label, now_utc,
@@ -94,7 +94,7 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
     day_offset = int(query.data.split(":", 1)[1])
     await query.edit_message_text("⏳ Chargement des films…")
     try:
-        root              = load_epg("fr")
+        root              = await load_epg("fr")
         results, jour_label, now_utc = build_type_results(root, day_offset, is_film, min_duration=75)
         await send_type_blocs(
             results, jour_label, now_utc,
@@ -111,7 +111,7 @@ async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     day_offset = int(query.data.split(":", 1)[1])
     await query.edit_message_text("⏳ Chargement des séries…")
     try:
-        root              = load_epg("fr")
+        root              = await load_epg("fr")
         results, jour_label, now_utc = build_type_results(root, day_offset, is_serie)
         await send_type_blocs(
             results, jour_label, now_utc,
@@ -132,7 +132,7 @@ async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text("⏳ Chargement du sport…")
     try:
         ch_list           = CH_SPORT_BY_COUNTRY.get(pays, CH_SPORT_FR)
-        root              = load_epg(pays)
+        root              = await load_epg(pays)
         results, jour_label, now_utc = build_sport_results(root, day_offset, ch_list)
         flag              = EPG_SOURCES[pays]["label"]
         await send_type_blocs(
@@ -163,7 +163,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.edit_message_text("⏳ Chargement des inédits…")
     try:
         if type_str == "sport":
-            root              = load_epg("fr")
+            root              = await load_epg("fr")
             results, jour_label, now_utc = build_sport_results(root, day_offset, CH_SPORT_FR)
             results           = [r for r in results if not is_nouveautes_filler(r["title"])]
             await send_type_blocs(
@@ -174,7 +174,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
                 ch_order_list=CH_SPORT_FR,
             )
         else:
-            root              = load_epg("fr")
+            root              = await load_epg("fr")
             results, jour_label, now_utc = build_nouveautes_tnt(root, day_offset)
             await send_type_blocs(
                 results, jour_label, now_utc,
@@ -194,7 +194,7 @@ async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TY
     page       = int(parts[2]) if len(parts) > 2 else 0
     await query.edit_message_text("⏳ Chargement…")
     try:
-        root     = load_epg(country)
+        root     = await load_epg(country)
         channels = get_channels(root)
         all_ch   = sorted(channels.items(), key=lambda x: clean_name(x[1]).lower())
         flag     = EPG_SOURCES[country]["label"]
@@ -252,7 +252,7 @@ async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     day_offset = int(day_str)
     await query.edit_message_text("⏳ Chargement du prime time…")
     try:
-        root              = load_epg(pays)
+        root              = await load_epg(pays)
         results, jour_label, now_utc = build_prime_results(root, day_offset)
         flag              = EPG_SOURCES[pays]["label"]
         await send_type_blocs(
@@ -270,7 +270,7 @@ async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     day_offset = int(query.data.split(":", 1)[1])
     await query.edit_message_text("⏳ Chargement de la nuit…")
     try:
-        root              = load_epg("fr")
+        root              = await load_epg("fr")
         results, jour_label, now_utc = build_nuit_results(root, day_offset)
         await send_type_blocs(
             results, jour_label, now_utc,
