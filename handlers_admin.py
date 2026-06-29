@@ -62,17 +62,10 @@ async def post_init(app: Application) -> None:
             BotCommand("testepg",           "Tester source EPG 🔌"),
             BotCommand("top",               "Top 10 chaînes 🏆"),
             BotCommand("sante",             "Qualité EPG 🩺"),
-            BotCommand("couverture",        "Couverture EPG 24h 📡"),
-            BotCommand("manquantes",        "Chaînes absentes 🔎"),
-            BotCommand("chainesorphelines", "Chaînes hors listes 🔎"),
-            BotCommand("cherche_id",        "Trouver un channel ID 🔍"),
-            BotCommand("debug",             "Programmes bruts 🔬"),
-            BotCommand("blacklist",         "Blacklists 🚫"),
             BotCommand("logs",              "Erreurs 📋"),
             BotCommand("memoire",           "Mémoire 🧠"),
             BotCommand("prochainexpire",    "Expiration caches ⏳"),
             BotCommand("nbusers",           "Utilisateurs 👥"),
-            BotCommand("diff",              "Diff EPG 🔄"),
             BotCommand("gc",               "GC Python 🧹"),
             BotCommand("id",               "User ID 🆔"),
         ], scope=BotCommandScopeChat(chat_id=ADMIN_USER_ID))
@@ -96,11 +89,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💾 Cache : 🇫🇷 {cache_fr}  🇬🇧 {cache_gb}\n\n"
         "• /status • /ping • /version • /refresh `[pays]`\n"
         "• /resetcache • /cache • /stats • /testepg `[pays]`\n"
-        "• /top `[pays]` • /sante `[pays]` • /couverture `[pays]`\n"
-        "• /manquantes `[pays]` • /chainesorphelines `[pays]`\n"
-        "• /cherche\\_id `<nom>` • /debug `<id>` • /blacklist\n"
+        "• /top `[pays]` • /sante `[pays]`\n"
         "• /logs • /memoire • /prochainexpire • /nbusers\n"
-        "• /diff `[pays]` • /gc • /id",
+        "• /gc • /id",
         parse_mode="Markdown"
     )
 
