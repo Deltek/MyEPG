@@ -5,6 +5,15 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.2.3] - 2026-06-29
+
+### Changed
+- Suppression de l'emoji `🕐` répété sur chaque ligne de programme (lisibilité)
+- Durée et temps restant déplacés en fin de ligne en italique
+- Séparateur de chaîne uniformisé dans tous les messages
+
+---
+
 ## [1.2.2] - 2026-06-29
 
 ### Fixed
