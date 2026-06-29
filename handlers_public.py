@@ -37,9 +37,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/recherche `<mot>`  /chaine `<nom>`  /chaines\n\n"
         "📈 *Tendances*\n"
         "/trending  /doublons\n\n"
-        "🌍 Pays : `fr` 🇫🇷  |  `gb` 🇬🇧\n"
+        "🌍 Pays : `fr` 🇫🇷  \\|  `gb` 🇬🇧\n"
         "Ex: `/sport gb`  `/prime fr`  `/maintenant arte`",
-        parse_mode="Markdown"
+        parse_mode="MarkdownV2"
     )
 
 async def aide(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,7 +56,7 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
         current  = next((p for p in progs if p["start"] <= now < p["stop"]), None)
         nxt      = next((p for p in progs if p["start"] > now), None)
         if not current:
-            await reply_fn(f"❌ Aucun programme en cours sur *{sanitize_md(nom)}*.", parse_mode="Markdown")
+            await reply_fn(f"❌ Aucun programme en cours sur *{sanitize_md(nom)}*\\.", parse_mode="MarkdownV2")
             return
         new_tag = " 🆕" if current.get("new") else ""
         texte   = (
@@ -72,7 +72,7 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
             h       = nxt["start"].astimezone(TZ_PARIS).strftime("%H:%M")
             nxt_tag = " 🆕" if nxt.get("new") else ""
             texte  += f"\n⏭ À {h} : _{sanitize_md(nxt['title'])}{nxt_tag}_"
-        await reply_fn(texte, parse_mode="Markdown")
+        await reply_fn(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur _send_maintenant_chaine")
         logger.exception("Erreur handler")
@@ -89,19 +89,19 @@ async def _maintenant_sport(update: Update):
             await msg.edit_text("❌ Aucun programme sport en cours.")
             return
         heure = now_utc.astimezone(TZ_PARIS).strftime("%H:%M")
-        texte = f"⚽ *Sport en ce moment* à {heure} — {len(results)} chaîne(s)\n\n"
+        texte = f"⚽ *Sport en ce moment* à {heure} — {len(results)} chaîne\\(s\\)\n\n"
         for r in results:
             h_start = r["start"].astimezone(TZ_PARIS).strftime("%H:%M")
             h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             ph_tag  = " ⚠️" if r.get("placeholder") else ""
             texte  += f"📺 *{sanitize_md(r['channel'])}*\n"
-            texte  += f"🔴 {h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}  _(reste {r['duree_reste']})_\n"
+            texte  += f"🔴 {h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}  _\\(reste {r['duree_reste']}\\)_\n"
             if r.get("desc") and not r.get("placeholder"):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
@@ -115,22 +115,22 @@ async def maintenant(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cid       = get_ch_id_by_name(nom_saisi)
         if not cid:
             await update.message.reply_text(
-                f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable.\n"
+                f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\.\n"
                 "Ex: tf1, m6, arte, bein1, eurosport, bbc1…\nOu: /maintenant sport",
-                parse_mode="Markdown"
+                parse_mode="MarkdownV2"
             )
             return
         country = "gb" if cid.endswith(".uk") else "fr"
         await _send_maintenant_chaine(update.message.reply_text, country, cid)
         return
     await update.message.reply_text(
-        "🌍 *En ce moment – Quel pays ?*", parse_mode="Markdown",
+        "🌍 *En ce moment – Quel pays ?*", parse_mode="MarkdownV2",
         reply_markup=country_keyboard("now")
     )
 
 async def soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📅 *Quel soir ?*", parse_mode="Markdown",
+        "📅 *Quel soir ?*", parse_mode="MarkdownV2",
         reply_markup=day_keyboard("soir")
     )
 
@@ -139,8 +139,8 @@ async def prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args and context.args[0].lower() in EPG_SOURCES:
         pays = context.args[0].lower()
     await update.message.reply_text(
-        f"🌟 *Prime time – Quel jour ?* ({EPG_SOURCES[pays]['label']})",
-        parse_mode="Markdown",
+        f"🌟 *Prime time – Quel jour ?* \\({EPG_SOURCES[pays]['label']}\\)",
+        parse_mode="MarkdownV2",
         reply_markup=day_keyboard(f"prime_{pays}")
     )
 
@@ -151,8 +151,8 @@ async def demain(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results, channels, jour_label, now_utc = build_soir_results(root, 1)
         await send_soir_blocs(
             results, channels, jour_label, now_utc,
-            send_fn=lambda t, **kw: update.message.reply_text(t, parse_mode="Markdown", **kw),
-            edit_fn=lambda t, **kw: msg.edit_text(t, parse_mode="Markdown", **kw),
+            send_fn=lambda t, **kw: update.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            edit_fn=lambda t, **kw: msg.edit_text(t, parse_mode="MarkdownV2", **kw),
         )
     except Exception as e:
         logger.exception("Erreur handler")
@@ -160,19 +160,19 @@ async def demain(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🌙 *Nuit – Quel jour ?*", parse_mode="Markdown",
+        "🌙 *Nuit – Quel jour ?*", parse_mode="MarkdownV2",
         reply_markup=day_keyboard("nuit")
     )
 
 async def film(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🎬 *Films – Quel jour ?*", parse_mode="Markdown",
+        "🎬 *Films – Quel jour ?*", parse_mode="MarkdownV2",
         reply_markup=day_keyboard("film")
     )
 
 async def series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📺 *Séries – Quel jour ?*", parse_mode="Markdown",
+        "📺 *Séries – Quel jour ?*", parse_mode="MarkdownV2",
         reply_markup=day_keyboard("series")
     )
 
@@ -181,8 +181,8 @@ async def sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args and context.args[0].lower() in EPG_SOURCES:
         pays = context.args[0].lower()
     await update.message.reply_text(
-        f"⚽ *Sport – Quel jour ?* ({EPG_SOURCES[pays]['label']})",
-        parse_mode="Markdown",
+        f"⚽ *Sport – Quel jour ?* \\({EPG_SOURCES[pays]['label']}\\)",
+        parse_mode="MarkdownV2",
         reply_markup=day_keyboard(f"sport_{pays}")
     )
 
@@ -198,20 +198,20 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await msg.edit_text(f"❌ Aucun live sport en cours{filtre_txt}.")
             return
         heure      = now_utc.astimezone(TZ_PARIS).strftime("%H:%M")
-        filtre_txt = f" ({filtre.upper()})" if filtre else ""
-        texte = f"🔴 *Lives sport en cours*{filtre_txt} à {heure} — {len(results)} chaîne(s)\n\n"
+        filtre_txt = f" \\({filtre.upper()}\\)" if filtre else ""
+        texte = f"🔴 *Lives sport en cours*{filtre_txt} à {heure} — {len(results)} chaîne\\(s\\)\n\n"
         for r in results:
             h_start = r["start"].astimezone(TZ_PARIS).strftime("%H:%M")
             h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             ph_tag  = " ⚠️" if r.get("placeholder") else ""
             texte  += f"📺 *{sanitize_md(r['channel'])}*\n"
-            texte  += f"🔴 {h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}  _(reste {r['duree_reste']})_\n"
+            texte  += f"🔴 {h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}  _\\(reste {r['duree_reste']}\\)_\n"
             if r.get("desc") and not r.get("placeholder"):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur /live")
         logger.exception("Erreur handler")
@@ -219,7 +219,7 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🆕 *Inédits – Quel jour ?*", parse_mode="Markdown",
+        "🆕 *Inédits – Quel jour ?*", parse_mode="MarkdownV2",
         reply_markup=day_keyboard("nouveautes_day")
     )
 
@@ -238,10 +238,10 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
             nom     = clean_name(channels.get(cid, cid))
             h_stop  = current["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
             new_tag = " 🆕" if current.get("new") else ""
-            texte  += f"📺 *{sanitize_md(nom)}* — {sanitize_md(current['title'])}{new_tag} _(–{h_stop})_\n"
+            texte  += f"📺 *{sanitize_md(nom)}* — {sanitize_md(current['title'])}{new_tag} _\\(–{h_stop}\\)_\n"
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
@@ -269,7 +269,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte += "\n"
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
@@ -302,7 +302,7 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not doublons_list:
             await msg.edit_text("✅ Aucun doublon TNT sur les 6 prochaines heures.")
             return
-        texte = f"🔁 *Doublons TNT FR* (prochaines 6h)\n_{len(doublons_list)} titre(s) en doublon_\n\n"
+        texte = f"🔁 *Doublons TNT FR* \\(prochaines 6h\\)\n_{len(doublons_list)} titre\\(s\\) en doublon_\n\n"
         for title, chs in doublons_list:
             texte += f"▶️ *{sanitize_md(title)}*\n"
             for ch in chs:
@@ -310,7 +310,7 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte += "\n"
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
@@ -340,10 +340,10 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not top:
             await msg.edit_text("📈 Aucun titre tendance trouvé aujourd'hui.")
             return
-        texte = "📈 *Titres tendance du jour*\n_(diffusés plusieurs fois sur 24h)_\n\n"
+        texte = "📈 *Titres tendance du jour*\n_\\(diffusés plusieurs fois sur 24h\\)_\n\n"
         for i, (title, count) in enumerate(top, 1):
             texte += f"{i}\\. {sanitize_md(title)} ×{count}\n"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
@@ -352,15 +352,15 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(
             "Usage : `/chaine <nom>`\nEx: `/chaine tf1`, `/chaine bbc1`",
-            parse_mode="Markdown"
+            parse_mode="MarkdownV2"
         )
         return
     nom_saisi = " ".join(context.args)
     cid       = get_ch_id_by_name(nom_saisi)
     if not cid:
         await update.message.reply_text(
-            f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable.\nEx: tf1, m6, arte, bbc1…",
-            parse_mode="Markdown"
+            f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\.\nEx: tf1, m6, arte, bbc1…",
+            parse_mode="MarkdownV2"
         )
         return
     country = "gb" if cid.endswith(".uk") else "fr"
@@ -372,7 +372,7 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
         progs    = get_programmes_for_channel(root, cid, limit=8)
         now      = datetime.now(tz=timezone.utc)
         if not progs:
-            await msg.edit_text(f"❌ Aucun programme pour *{sanitize_md(nom)}*.", parse_mode="Markdown")
+            await msg.edit_text(f"❌ Aucun programme pour *{sanitize_md(nom)}*\\.", parse_mode="MarkdownV2")
             return
         texte = f"📺 *{sanitize_md(nom)}*\n\n"
         for p in progs:
@@ -383,14 +383,14 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte   += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(p['title'])}{new_tag}\n"
             if p.get("desc"):
                 texte += f"   📝 {sanitize_md(p['desc'])}\n"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📋 *Chaînes – Quel pays ?*", parse_mode="Markdown",
+        "📋 *Chaînes – Quel pays ?*", parse_mode="MarkdownV2",
         reply_markup=country_keyboard("list")
     )
 
@@ -398,13 +398,13 @@ async def recherche(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(
             "Usage : `/recherche <mot>`\nEx: `/recherche star wars`",
-            parse_mode="Markdown"
+            parse_mode="MarkdownV2"
         )
         return
     mot = " ".join(context.args)
     context.user_data["search_mot"] = mot
     await update.message.reply_text(
-        f"🔍 *{sanitize_md(mot)}* — Quel pays ?", parse_mode="Markdown",
+        f"🔍 *{sanitize_md(mot)}* — Quel pays ?", parse_mode="MarkdownV2",
         reply_markup=country_keyboard("search")
     )
 
@@ -439,11 +439,11 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
         page_results = results[start_i:start_i + SEARCH_PAGE_SIZE]
         if not page_results:
             await query.message.reply_text(
-                f"🔍 *{sanitize_md(mot)}* — {flag}\n❌ Aucun résultat.",
-                parse_mode="Markdown"
+                f"🔍 *{sanitize_md(mot)}* — {flag}\n❌ Aucun résultat\\.",
+                parse_mode="MarkdownV2"
             )
             return
-        texte = f"🔍 *{sanitize_md(mot)}* — {flag}\n_{total} résultat(s) — page {page + 1}_\n\n"
+        texte = f"🔍 *{sanitize_md(mot)}* — {flag}\n_{total} résultat\\(s\\) — page {page + 1}_\n\n"
         for r in page_results:
             h_start = r["start"].astimezone(TZ_PARIS).strftime("%d/%m %H:%M")
             h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
@@ -460,7 +460,7 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
         markup = InlineKeyboardMarkup([buttons]) if buttons else None
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
-        await query.message.reply_text(texte, parse_mode="Markdown", reply_markup=markup)
+        await query.message.reply_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
     except Exception as e:
         logger.exception("Erreur _do_recherche")
         logger.exception("Erreur handler")
@@ -468,5 +468,5 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
 
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        f"🆔 Ton user ID : `{update.effective_user.id}`", parse_mode="Markdown"
+        f"🆔 Ton user ID : `{update.effective_user.id}`", parse_mode="MarkdownV2"
     )
