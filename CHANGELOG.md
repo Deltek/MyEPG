@@ -7,6 +7,9 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `/sporttnt` — Sport du jour sur les chaînes TNT FR (détection par catégorie EPG)
+
 ---
 
 ## [1.3.1] - 2026-06-29

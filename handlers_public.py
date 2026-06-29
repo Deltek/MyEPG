@@ -12,7 +12,7 @@ from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, EPG_SOURCES, SEARCH_PAGE_SI
 from utils import (
     now_paris, get_ch_id_by_name, sanitize_md, clean_name, _normalize, _strip_accents,
     get_channels, parse_xmltv_time, clean_title, clean_desc, duree_str,
-    is_film, is_serie
+    is_film, is_serie, is_sport
 )
 from epg_loader import load_epg
 from epg_query import get_programmes_for_channel
@@ -32,7 +32,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌃 *Soirée*\n"
         "/soir  /prime `[pays]`  /demain  /nuit  /soir5\n\n"
         "🎬 *Par genre*\n"
-        "/film  /series  /sport `[pays]`  /nouveautes\n\n"
+        "/film  /series  /sport `[pays]`  /sporttnt  /nouveautes\n\n"
         "🔍 *Recherche*\n"
         "/recherche `<mot>`  /chaine `<nom>`  /chaines\n\n"
         "📈 *Tendances*\n"
@@ -465,6 +465,12 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
         logger.exception("Erreur _do_recherche")
         logger.exception("Erreur handler")
         await query.message.reply_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
+async def sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🏟 *Sport TNT – Quel jour ?*", parse_mode="MarkdownV2",
+        reply_markup=day_keyboard("sporttnt")
+    )
 
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
