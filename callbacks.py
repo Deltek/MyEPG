@@ -70,7 +70,8 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
         await query.edit_message_text(texte, parse_mode="Markdown")
     except Exception as e:
         logger.exception("Erreur callback_maintenant_all")
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
@@ -86,7 +87,8 @@ async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
             edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="Markdown", **kw),
         )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
@@ -103,7 +105,8 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
         )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
@@ -120,7 +123,8 @@ async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
         )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
@@ -143,7 +147,8 @@ async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ch_order_list=ch_list,
         )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_nouveautes_day(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from keyboards import nouveautes_type_keyboard
@@ -183,7 +188,8 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
                 send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
             )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -216,7 +222,8 @@ async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TY
             texte = texte[:4090] + "…"
         await query.edit_message_text(texte, parse_mode="Markdown", reply_markup=markup)
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -262,7 +269,8 @@ async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
         )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -279,7 +287,8 @@ async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="Markdown", **kw),
         )
     except Exception as e:
-        await query.edit_message_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_admin_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from config import ADMIN_USER_ID
