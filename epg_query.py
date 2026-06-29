@@ -6,13 +6,16 @@ from datetime import datetime, timedelta, timezone
 from config import TZ_PARIS
 from utils import parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories, duree_str
 
-def get_programmes_for_channel(root, channel_id: str, limit: int = 8) -> list:
+def get_programmes_for_channel(root, channel_id: str, limit: int = 8, country: str = "fr") -> list:
     """Extrait les prochains programmes d'une chaîne."""
+    from epg_loader import get_epg_index
+    index = get_epg_index(country)
+    candidates = index.get(channel_id, []) if index else [
+        p for p in root.findall("programme") if p.get("channel") == channel_id
+    ]
     now     = datetime.now(tz=timezone.utc)
     results = []
-    for prog in root.findall("programme"):
-        if prog.get("channel") != channel_id:
-            continue
+    for prog in candidates:
         start_str = prog.get("start", "")
         stop_str  = prog.get("stop",  "")
         if not start_str or not stop_str:

@@ -7,6 +7,11 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Index EPG par `channel_id` construit une fois au chargement — tous les builders passent de O(n) à O(1) par chaîne (#21, #22, #23)
+- `/resume` et `callback_maintenant_all` : plus de scan complet à chaque appel de chaîne
+- `get_channels()` n'est plus reconstruit à chaque commande — lu depuis le cache
+
 ---
 
 ## [1.4.0] - 2026-06-29
