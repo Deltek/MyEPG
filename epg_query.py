@@ -34,19 +34,3 @@ def get_programmes_for_channel(root, channel_id: str, limit: int = 8) -> list:
             break
     return results
 
-def format_programme(prog: dict) -> str:
-    """Formate un programme pour affichage."""
-    from utils import sanitize_md
-    
-    now      = datetime.now(tz=timezone.utc)
-    h_start  = prog["start"].astimezone(TZ_PARIS).strftime("%H:%M")
-    h_stop   = prog["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
-    en_cours = "🔴 " if prog["start"] <= now < prog["stop"] else ""
-    new_tag  = " 🆕" if prog.get("new") else ""
-    title    = sanitize_md(prog["title"])
-    texte    = f"{en_cours}🕐 *{h_start}–{h_stop}*  {title}{new_tag}\n"
-    if prog.get("cat"):
-        texte += f"   📂 _{sanitize_md(prog['cat'])}_\n"
-    if prog.get("desc"):
-        texte += f"   📝 {sanitize_md(prog['desc'])}\n"
-    return texte
