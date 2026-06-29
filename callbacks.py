@@ -65,12 +65,11 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
             else:
                 texte += f"📺 *{sanitize_md(nom)}* — aucun programme\n"
             texte += "\n"
-        if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+        if len(texte) > 4000:
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await query.edit_message_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur callback_maintenant_all")
-        logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -245,8 +244,12 @@ async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_
 async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    _, pays, mot, page_str = query.data.split(":", 3)
+    _, pays, page_str = query.data.split(":", 2)
     page = int(page_str)
+    mot  = context.user_data.get("search_mot", "")
+    if not mot:
+        await query.edit_message_text("❌ Mot\\-clé perdu\\. Relance /recherche\\.", parse_mode="MarkdownV2")
+        return
     await query.edit_message_text(f"🔍 Page {page + 1}…")
     from handlers_public import _do_recherche
     await _do_recherche(update, mot, pays, page)

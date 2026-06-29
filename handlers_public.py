@@ -75,7 +75,6 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
         await reply_fn(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur _send_maintenant_chaine")
-        logger.exception("Erreur handler")
         await reply_fn("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def _maintenant_sport(update: Update):
@@ -214,7 +213,6 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur /live")
-        logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -329,9 +327,10 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 continue
             try:
                 start = parse_xmltv_time(prog.get("start", ""))
+                stop  = parse_xmltv_time(prog.get("stop",  ""))
             except ValueError:
                 continue
-            if not (now_utc <= start < end_utc):
+            if start >= end_utc or stop <= now_utc:
                 continue
             title = clean_title(prog.findtext("title", default=""))
             if title:
@@ -454,16 +453,15 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
             texte += "\n"
         buttons = []
         if page > 0:
-            buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{mot}:{page-1}"))
+            buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{page-1}"))
         if start_i + SEARCH_PAGE_SIZE < total:
-            buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{mot}:{page+1}"))
+            buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{page+1}"))
         markup = InlineKeyboardMarkup([buttons]) if buttons else None
-        if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+        if len(texte) > 4000:
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await query.message.reply_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
     except Exception as e:
         logger.exception("Erreur _do_recherche")
-        logger.exception("Erreur handler")
         await query.message.reply_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
