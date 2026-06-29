@@ -5,6 +5,17 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- 12 tests unitaires pour `builders.py` (fenêtres horaires, filtres fillers, nouveautés)
+
+### Changed
+- `/aide` reorganisée par catégorie (Maintenant, Soirée, Genre, Recherche, Tendances)
+- Erreurs internes loggées et masquées à l'utilisateur (message générique)
+
+---
+
 ## [1.2.4] - 2026-06-29
 
 ### Changed

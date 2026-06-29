@@ -27,24 +27,16 @@ from logger_utils import logger
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📺 *Bot Programme TV*\n\n"
-        "• /maintenant `[chaîne|sport]` – En ce moment\n"
-        "• /soir       – Soirée TNT FR 🌃\n"
-        "• /prime `[pays]` – Prime time 20h–22h30 🌟\n"
-        "• /demain     – Programme de demain soir\n"
-        "• /nuit       – Programme de la nuit 00h–06h 🌙\n"
-        "• /film       – Films ce soir 🎬\n"
-        "• /series     – Séries ce soir 📺\n"
-        "• /sport `[pays]` – Sport du jour ⚽\n"
-        "• /live       – Lives en cours 🔴\n"
-        "• /nouveautes – Inédits du jour 🆕\n"
-        "• /resume     – Résumé compact maintenant 📋\n"
-        "• /soir5      – Les 5 prochains soirs 🗓\n"
-        "• /doublons   – Doublons TNT 🔁\n"
-        "• /trending   – Titres tendance du jour 📈\n"
-        "• /chaine `<nom>` – Prochains programmes\n"
-        "• /chaines    – Parcourir les chaînes\n"
-        "• /recherche `<mot>` – Rechercher\n"
-        "• /aide       – Cette aide\n\n"
+        "🕐 *Maintenant*\n"
+        "/maintenant `[chaîne|sport]`  /resume  /live\n\n"
+        "🌃 *Soirée*\n"
+        "/soir  /prime `[pays]`  /demain  /nuit  /soir5\n\n"
+        "🎬 *Par genre*\n"
+        "/film  /series  /sport `[pays]`  /nouveautes\n\n"
+        "🔍 *Recherche*\n"
+        "/recherche `<mot>`  /chaine `<nom>`  /chaines\n\n"
+        "📈 *Tendances*\n"
+        "/trending  /doublons\n\n"
         "🌍 Pays : `fr` 🇫🇷  |  `gb` 🇬🇧\n"
         "Ex: `/sport gb`  `/prime fr`  `/maintenant arte`",
         parse_mode="Markdown"
@@ -83,7 +75,8 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
         await reply_fn(texte, parse_mode="Markdown")
     except Exception as e:
         logger.exception("Erreur _send_maintenant_chaine")
-        await reply_fn(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await reply_fn("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def _maintenant_sport(update: Update):
     """Affiche les sports en cours."""
@@ -110,7 +103,8 @@ async def _maintenant_sport(update: Update):
             texte = texte[:4090] + "…"
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def maintenant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args:
@@ -161,7 +155,8 @@ async def demain(update: Update, context: ContextTypes.DEFAULT_TYPE):
             edit_fn=lambda t, **kw: msg.edit_text(t, parse_mode="Markdown", **kw),
         )
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -219,7 +214,8 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
         logger.exception("Erreur /live")
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -247,7 +243,8 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte = texte[:4090] + "…"
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🗓 Chargement des 5 prochains soirs…")
@@ -274,7 +271,8 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte = texte[:4090] + "…"
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🔁 Recherche des doublons TNT…")
@@ -314,7 +312,8 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte = texte[:4090] + "…"
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("📈 Calcul des tendances…")
@@ -346,7 +345,8 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte += f"{i}\\. {sanitize_md(title)} ×{count}\n"
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
@@ -385,7 +385,8 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"   📝 {sanitize_md(p['desc'])}\n"
         await msg.edit_text(texte, parse_mode="Markdown")
     except Exception as e:
-        await msg.edit_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -462,7 +463,8 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
         await query.message.reply_text(texte, parse_mode="Markdown", reply_markup=markup)
     except Exception as e:
         logger.exception("Erreur _do_recherche")
-        await query.message.reply_text(f"❌ Erreur : {e}")
+        logger.exception("Erreur handler")
+        await query.message.reply_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
