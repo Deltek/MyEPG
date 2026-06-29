@@ -315,6 +315,14 @@ MIT License — Libre d'utilisation
 
 ## 📝 Changelog
 
+### v1.1 (Juin 2026)
+- ✅ 10 commandes ajoutées : `/prime`, `/demain`, `/nuit`, `/resume`, `/soir5`, `/doublons`, `/trending`, `/chaine`, `/chaines`, `/recherche`
+- ✅ Correction crash `/recherche` (`_do_recherche` manquante)
+- ✅ Builders EPG centralisés (`build_maintenant_sport`, `build_nouveautes_tnt`, `build_prime_results`, `build_nuit_results`)
+- ✅ Découplage `epg_loader` / Telegram
+- ✅ Aliases chaînes déplacés dans `config.py`
+- ✅ `format_programme` déplacée dans `senders.py`
+
 ### v1.0 (Juin 2026)
 - ✅ Séparation responsabilités (builders, senders, utils)
 - ✅ Logging en mémoire
