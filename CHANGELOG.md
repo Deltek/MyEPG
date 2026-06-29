@@ -7,10 +7,16 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.6.0] - 2026-06-29
+
 ### Changed
-- Index EPG par `channel_id` construit une fois au chargement — tous les builders passent de O(n) à O(1) par chaîne (#21, #22, #23)
-- `/resume` et `callback_maintenant_all` : plus de scan complet à chaque appel de chaîne
+- Index EPG par `channel_id` construit une fois au chargement — tous les builders passent de O(n×nb_chaînes) à O(nb_chaînes)
+- `/resume` : 27 scans O(n) → 27 lookups O(1) dans l'index
+- `/soir5` : 5 scans complets → itération directe par chaîne
 - `get_channels()` n'est plus reconstruit à chaque commande — lu depuis le cache
+- `import httpx` déplacé en lazy import dans `load_epg()` (ne casse plus les tests)
 
 ---
 
