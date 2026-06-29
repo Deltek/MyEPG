@@ -75,7 +75,6 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
         await reply_fn(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur _send_maintenant_chaine")
-        logger.exception("Erreur handler")
         await reply_fn("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def _maintenant_sport(update: Update):
@@ -214,7 +213,6 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur /live")
-        logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -463,7 +461,6 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
         await query.message.reply_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
     except Exception as e:
         logger.exception("Erreur _do_recherche")
-        logger.exception("Erreur handler")
         await query.message.reply_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
