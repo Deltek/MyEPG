@@ -86,7 +86,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cache_fr = "✅" if cache["fr"]["tree"] else "❌"
     cache_gb = "✅" if cache["gb"]["tree"] else "❌"
     await update.message.reply_text(
-        f"🔧 *Panneau Admin – v{BOT_VERSION}*\n"
+        f"🔧 *Panneau Admin – v{sanitize_md(BOT_VERSION)}*\n"
         f"⏱ Uptime : `{h}h{m:02d}m{s:02d}s`\n"
         f"💾 Cache : 🇫🇷 {cache_fr}  🇬🇧 {cache_gb}\n\n"
         "• /status • /ping • /version • /refresh `[pays]`\n"
@@ -94,7 +94,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /top `[pays]` • /sante `[pays]`\n"
         "• /logs • /memoire • /prochainexpire • /nbusers\n"
         "• /gc • /id",
-        parse_mode="Markdown"
+        parse_mode="MarkdownV2"
     )
 
 @admin_only
@@ -122,12 +122,12 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_err_txt = f"`{ts}` {sanitize_md(r.getMessage()[:80])}"
 
     await update.message.reply_text(
-        f"📊 *Status – v{BOT_VERSION}*\n\n"
+        f"📊 *Status – v{sanitize_md(BOT_VERSION)}*\n\n"
         f"⏱ Uptime : `{h}h{m:02d}m{s:02d}s`\n"
         f"👥 Users : {len(get_known_users())}\n\n"
         f"💾 *Cache :*\n" + "\n".join(cache_lines) + "\n\n"
         f"📋 *Dernière erreur :*\n  {last_err_txt}",
-        parse_mode="Markdown"
+        parse_mode="MarkdownV2"
     )
 
 @admin_only
@@ -147,7 +147,7 @@ async def version(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"  Version : `{BOT_VERSION}`\n"
         f"  Uptime  : `{h}h{m:02d}m{s:02d}s`\n"
         f"  Python  : `{sys.version.split()[0]}`",
-        parse_mode="Markdown"
+        parse_mode="MarkdownV2"
     )
 
 @admin_only
@@ -157,7 +157,7 @@ async def refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
         p = context.args[0].lower()
         if p not in EPG_SOURCES:
             await update.message.reply_text(
-                f"❌ Pays inconnu : `{p}`", parse_mode="Markdown"
+                f"❌ Pays inconnu : `{p}`", parse_mode="MarkdownV2"
             )
             return
         pays_cibles = [p]
@@ -168,7 +168,7 @@ async def refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for country in pays_cibles:
             cache[country]["tree"]      = None
             cache[country]["loaded_at"] = 0
-            load_epg(country)
+            await load_epg(country)
         await msg.edit_text(f"✅ Cache rechargé : {label}")
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")
@@ -184,9 +184,9 @@ async def resetcache(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🧹 *Cache reset*\n\n"
         f"  💾 Caches EPG     : {caches_actifs} → 0\n"
         f"  📸 Snapshots diff : {snapshots} → 0\n\n"
-        f"⚠️ Rechargement à la prochaine demande.\n"
-        f"💡 `/refresh` pour forcer immédiatement.",
-        parse_mode="Markdown"
+        f"⚠️ Rechargement à la prochaine demande\\.\n"
+        f"💡 `/refresh` pour forcer immédiatement\\.",
+        parse_mode="MarkdownV2"
     )
 
 @admin_only
@@ -208,12 +208,12 @@ async def cache_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
         expire_min = max(0, CACHE_TTL // 60 - age_min)
         lignes.append(
             f"{flag} ✅\n"
-            f"  📡 {nb_ch} chaînes  |  📋 {nb_prog} programmes\n"
-            f"  📦 ~{size_kb} Ko\n"
+            f"  📡 {nb_ch} chaînes  \\|  📋 {nb_prog} programmes\n"
+            f"  📦 \\~{size_kb} Ko\n"
             f"  🕐 Chargé à {loaded_at.strftime('%H:%M:%S')}\n"
-            f"  ⏳ Expire à {expire_at.strftime('%H:%M:%S')} _(dans {expire_min}min)_"
+            f"  ⏳ Expire à {expire_at.strftime('%H:%M:%S')} _\\(dans {expire_min}min\\)_"
         )
-    await update.message.reply_text("\n\n".join(lignes), parse_mode="Markdown")
+    await update.message.reply_text("\n\n".join(lignes), parse_mode="MarkdownV2")
 
 @admin_only
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -232,11 +232,11 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         expire    = max(0, CACHE_TTL // 60 - age_min)
         lignes.append(
             f"{flag}\n"
-            f"  📡 {nb_ch} chaînes  |  📋 {nb_prog} programmes\n"
+            f"  📡 {nb_ch} chaînes  \\|  📋 {nb_prog} programmes\n"
             f"  🕐 Chargé à {loaded_at.strftime('%H:%M:%S')} "
-            f"_(il y a {age_min}min, expire dans {expire}min)_"
+            f"_\\(il y a {age_min}min, expire dans {expire}min\\)_"
         )
-    await update.message.reply_text("\n\n".join(lignes), parse_mode="Markdown")
+    await update.message.reply_text("\n\n".join(lignes), parse_mode="MarkdownV2")
 
 @admin_only
 async def testepg(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -244,7 +244,7 @@ async def testepg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args:
         p = context.args[0].lower()
         if p not in EPG_SOURCES:
-            await update.message.reply_text(f"❌ Pays inconnu : `{p}`", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ Pays inconnu : `{p}`", parse_mode="MarkdownV2")
             return
         pays_cibles = [p]
     msg    = await update.message.reply_text("🔌 Test de connexion EPG…")
@@ -261,17 +261,17 @@ async def testepg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             r.close()
             lignes.append(f"{flag} ✅  ⏱ {ms}ms  📥 {len(chunk)} B")
         except requests.Timeout:
-            lignes.append(f"{flag} ❌ Timeout (>15s)")
+            lignes.append(f"{flag} ❌ Timeout \\(\\>15s\\)")
         except Exception as e:
             lignes.append(f"{flag} ❌ `{str(e)[:100]}`")
-    await msg.edit_text("\n\n".join(lignes), parse_mode="Markdown")
+    await msg.edit_text("\n\n".join(lignes), parse_mode="MarkdownV2")
 
 @admin_only
 async def top_chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pays = context.args[0].lower() if context.args and context.args[0].lower() in EPG_SOURCES else "fr"
     msg  = await update.message.reply_text("🏆 Calcul du top chaînes…")
     try:
-        root     = load_epg(pays)
+        root     = await load_epg(pays)
         from utils import get_channels
         channels = get_channels(root)
         compteur = defaultdict(int)
@@ -285,7 +285,7 @@ async def top_chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for i, (cid, nb) in enumerate(top, 1):
             nom    = clean_name(channels.get(cid, cid))
             texte += f"{i}\\. *{sanitize_md(nom)}* — {nb} programmes\n"
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")
 
@@ -294,7 +294,7 @@ async def sante(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pays = context.args[0].lower() if context.args and context.args[0].lower() in EPG_SOURCES else "fr"
     msg  = await update.message.reply_text("🩺 Analyse qualité EPG…")
     try:
-        root  = load_epg(pays)
+        root  = await load_epg(pays)
         flag  = EPG_SOURCES[pays]["label"]
         progs = root.findall("programme")
         total = len(progs)
@@ -311,11 +311,11 @@ async def sante(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await msg.edit_text(
             f"🩺 *Qualité EPG – {flag}*\n_{total} programmes_\n\n"
-            f"📝 Description  `{bar(avec_desc, total)}` {pct(avec_desc)}\n"
-            f"📂 Catégorie    `{bar(avec_cat,  total)}` {pct(avec_cat)}\n"
-            f"🆕 Tag nouveau  `{bar(avec_new,  total)}` {pct(avec_new)}\n"
-            f"🖼 Image        `{bar(avec_img,  total)}` {pct(avec_img)}\n",
-            parse_mode="Markdown"
+            f"📝 Description  `{bar(avec_desc, total)}` {sanitize_md(pct(avec_desc))}\n"
+            f"📂 Catégorie    `{bar(avec_cat,  total)}` {sanitize_md(pct(avec_cat))}\n"
+            f"🆕 Tag nouveau  `{bar(avec_new,  total)}` {sanitize_md(pct(avec_new))}\n"
+            f"🖼 Image        `{bar(avec_img,  total)}` {sanitize_md(pct(avec_img))}\n",
+            parse_mode="MarkdownV2"
         )
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")
@@ -330,12 +330,12 @@ async def logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for r in records[-10:]:
         level = "⚠️" if r.levelno == 30 else "❌"
         ts    = datetime.fromtimestamp(r.created, tz=TZ_PARIS).strftime("%H:%M:%S")
-        lignes.append(f"{level} `{ts}` *{sanitize_md(r.name)}*\n`{sanitize_md(r.getMessage()[:200])}`")
-    texte  = f"📋 *Dernières erreurs* ({len(records)} en mémoire)\n\n" + "\n\n".join(lignes)
+        lignes.append(f"{level} `{ts}` *{sanitize_md(r.name)}*\n`{r.getMessage()[:200]}`")
+    texte  = f"📋 *Dernières erreurs* \\({len(records)} en mémoire\\)\n\n" + "\n\n".join(lignes)
     markup = InlineKeyboardMarkup([[
         InlineKeyboardButton("🗑 Vider les logs", callback_data="admin_logs:clear")
     ]])
-    await update.message.reply_text(texte[:4096], parse_mode="Markdown", reply_markup=markup)
+    await update.message.reply_text(texte[:4096], parse_mode="MarkdownV2", reply_markup=markup)
 
 @admin_only
 async def memoire(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -362,12 +362,12 @@ async def memoire(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 cache_lines.append(f"  {flag} ❌ non chargé")
             else:
                 size_kb = len(ET.tostring(entry["tree"])) / 1024
-                cache_lines.append(f"  {flag} ~{size_kb:.0f} Ko")
+                cache_lines.append(f"  {flag} \\~{size_kb:.0f} Ko")
         texte = f"🧠 *Mémoire*\n\n  📦 RSS : `{rss_mb:.1f} Mo`\n"
         if has_psutil:
             texte += f"  📦 VMS : `{vms_mb:.1f} Mo`\n  📊 Usage : `{pct:.2f}%`\n"
         texte += "\n💾 *Cache XML :*\n" + "\n".join(cache_lines)
-        await msg.edit_text(texte, parse_mode="Markdown")
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")
 
@@ -391,7 +391,7 @@ async def prochainexpire(update: Update, context: ContextTypes.DEFAULT_TYPE):
             h, rem = divmod(reste_s, 3600)
             m, s   = divmod(rem, 60)
             duree  = f"{h}h{m:02d}m{s:02d}s" if h else f"{m}min{s:02d}s"
-            lignes.append(f"{flag} — ✅ expire à *{expire_dt.strftime('%H:%M:%S')}* _(dans {duree})_")
+            lignes.append(f"{flag} — ✅ expire à *{expire_dt.strftime('%H:%M:%S')}* _\\(dans {duree}\\)_")
             if prochain is None or expire_ts < prochain:
                 prochain = expire_ts
     if prochain:
@@ -401,7 +401,7 @@ async def prochainexpire(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mm, ss  = divmod(rem, 60)
         duree_p = f"{hh}h{mm:02d}m{ss:02d}s" if hh else f"{mm}min{ss:02d}s"
         lignes.append(f"\n🔔 Prochain dans *{duree_p}* à {p_dt.strftime('%H:%M:%S')}")
-    await update.message.reply_text("\n".join(lignes), parse_mode="Markdown")
+    await update.message.reply_text("\n".join(lignes), parse_mode="MarkdownV2")
 
 @admin_only
 async def nbusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -415,8 +415,8 @@ async def nbusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"  Depuis le démarrage : *{total}*\n"
         f"  ⏱ Uptime : `{h}h{m:02d}m{s:02d}s`\n"
         f"  🔧 Admin compté : {'✅' if is_admin else '❌'}\n"
-        f"  _{total - (1 if is_admin else 0)} utilisateur(s) hors admin_",
-        parse_mode="Markdown"
+        f"  _{total - (1 if is_admin else 0)} utilisateur\\(s\\) hors admin_",
+        parse_mode="MarkdownV2"
     )
 
 @admin_only
@@ -445,7 +445,7 @@ async def gc_collect(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"  📦 Avant : `{before:.1f} Mo`  →  Après : `{after:.1f} Mo`\n"
             f"  {signe} `{abs(diff_mb):.1f} Mo` "
             f"{'libérés' if diff_mb > 0.1 else ('ajoutés' if diff_mb < -0.1 else 'stable')}",
-            parse_mode="Markdown"
+            parse_mode="MarkdownV2"
         )
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")

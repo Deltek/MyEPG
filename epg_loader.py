@@ -6,7 +6,7 @@ import gzip
 from datetime import datetime
 from io import BytesIO
 import xml.etree.ElementTree as ET
-import requests
+import httpx
 
 from config import EPG_SOURCES, CACHE_TTL
 from logger_utils import logger
@@ -20,8 +20,8 @@ _cache_prev = {
     "gb": {"titles": set()},
 }
 
-def load_epg(country: str) -> ET.Element:
-    """Charge l'EPG pour un pays (avec cache)."""
+async def load_epg(country: str) -> ET.Element:
+    """Charge l'EPG pour un pays (avec cache). Async pour ne pas bloquer l'event loop."""
     now   = datetime.now().timestamp()
     entry = _cache[country]
     src   = EPG_SOURCES[country]
@@ -37,7 +37,8 @@ def load_epg(country: str) -> ET.Element:
 
         logger.info(f"Téléchargement EPG {country.upper()}…")
         try:
-            r = requests.get(src["url"], timeout=30)
+            async with httpx.AsyncClient() as client:
+                r = await client.get(src["url"], timeout=30)
             r.raise_for_status()
             entry["tree"]      = ET.parse(BytesIO(gzip.decompress(r.content))).getroot()
             entry["loaded_at"] = now

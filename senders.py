@@ -27,7 +27,7 @@ def format_programme(prog: dict) -> str:
 async def send_soir_blocs(results, channels, jour_label, now_utc, send_fn, edit_fn):
     """Envoie les résultats soirée par bloc de chaînes."""
     if not results:
-        await edit_fn(f"❌ Aucun programme de soirée trouvé pour la TNT ({jour_label}).")
+        await edit_fn(f"❌ Aucun programme de soirée trouvé pour la TNT \\({jour_label}\\)\\.")
         return
     
     ch_order = {ch: i for i, ch in enumerate(CH_TNT_FR)}
@@ -73,7 +73,7 @@ async def send_type_blocs(results, jour_label, now_utc, header: str,
                           edit_fn, send_fn, ch_order_list: list = None):
     """Envoie les résultats filtrés (films, séries, sport) par bloc."""
     if not results:
-        await edit_fn(f"❌ Aucun résultat trouvé pour le {jour_label}.")
+        await edit_fn(f"❌ Aucun résultat trouvé pour le {jour_label}\\.")
         return
     
     ref_list = ch_order_list or CH_TNT_FR

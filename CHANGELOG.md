@@ -5,6 +5,29 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+---
+
+## [1.3.0] - 2026-06-29
+
+### Added
+- 12 tests unitaires pour `builders.py` (fenêtres horaires, filtres fillers, nouveautés)
+
+### Changed
+- Migration `MarkdownV2` : tous les messages Telegram — formatage fiable même sur les titres avec caractères spéciaux
+- `/aide` reorganisée par catégorie (Maintenant, Soirée, Genre, Recherche, Tendances)
+- Erreurs internes loggées et masquées à l'utilisateur (message générique)
+
+---
+
+## [1.2.4] - 2026-06-29
+
+### Changed
+- `epg_loader` : passage de `requests` (synchrone) à `httpx` async — le bot ne bloque plus l'event loop pendant le rechargement EPG
+
+---
+
 ## [1.2.3] - 2026-06-29
 
 ### Changed
