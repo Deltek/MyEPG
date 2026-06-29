@@ -315,10 +315,4 @@ MIT License — Libre d'utilisation
 
 ## 📝 Changelog
 
-### v1.0 (Juin 2026)
-- ✅ Séparation responsabilités (builders, senders, utils)
-- ✅ Logging en mémoire
-- ✅ Cache EPG 1h
-- ✅ Support FR/GB
-- ✅ 20+ commandes
-- ✅ 25+ commandes admin
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.

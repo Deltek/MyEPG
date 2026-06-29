@@ -344,15 +344,6 @@ async def logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]])
     await update.message.reply_text(texte[:4096], parse_mode="Markdown", reply_markup=markup)
 
-async def callback_admin_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if query.from_user.id != ADMIN_USER_ID:
-        await query.answer("⛔ Accès refusé.", show_alert=True)
-        return
-    await query.answer()
-    get_mem_handler().records.clear()
-    await query.edit_message_text("🗑 Logs vidés.")
-
 @admin_only
 async def memoire(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🧠 Calcul mémoire…")

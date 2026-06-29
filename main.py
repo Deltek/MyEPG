@@ -14,22 +14,23 @@ from logger_utils import get_logger
 from handlers_admin import (
     post_init, admin_panel, status, ping, version, refresh,
     resetcache, cache_info, stats, testepg, top_chaines, sante,
-    logs, callback_admin_logs, memoire, prochainexpire, nbusers,
-    gc_collect
+    logs, memoire, prochainexpire, nbusers, gc_collect
 )
 from handlers_public import (
-    start, aide, maintenant, soir, film, series, sport, live,
-    nouveautes, get_id
+    start, aide, maintenant, soir, prime, demain, nuit,
+    film, series, sport, live, nouveautes,
+    resume, soir5, doublons, trending, chaine, chaines, recherche,
+    get_id
 )
 from callbacks import (
     callback_maintenant_country, callback_maintenant_chaine,
     callback_maintenant_all, callback_soir, callback_film,
     callback_series, callback_sport, callback_nouveautes_day,
     callback_nouveautes, callback_list_chaines,
-    callback_search_country, callback_search_page
+    callback_search_country, callback_search_page,
+    callback_prime, callback_nuit, callback_admin_logs
 )
 from state import add_user
-from epg_loader import set_app
 
 logger = get_logger()
 
@@ -52,9 +53,6 @@ def main():
         .post_init(post_init)
         .build()
     )
-    
-    # Stocke la référence app (pour EPG loader)
-    set_app(app)
 
     # ── Tracking utilisateurs (group=-1 = avant tout) ──
     app.add_handler(TypeHandler(Update, _track_user), group=-1)
@@ -64,11 +62,21 @@ def main():
     app.add_handler(CommandHandler("aide",       aide))
     app.add_handler(CommandHandler("maintenant", maintenant))
     app.add_handler(CommandHandler("soir",       soir))
+    app.add_handler(CommandHandler("prime",      prime))
+    app.add_handler(CommandHandler("demain",     demain))
+    app.add_handler(CommandHandler("nuit",       nuit))
     app.add_handler(CommandHandler("film",       film))
     app.add_handler(CommandHandler("series",     series))
     app.add_handler(CommandHandler("sport",      sport))
     app.add_handler(CommandHandler("live",       live))
     app.add_handler(CommandHandler("nouveautes", nouveautes))
+    app.add_handler(CommandHandler("resume",     resume))
+    app.add_handler(CommandHandler("soir5",      soir5))
+    app.add_handler(CommandHandler("doublons",   doublons))
+    app.add_handler(CommandHandler("trending",   trending))
+    app.add_handler(CommandHandler("chaine",     chaine))
+    app.add_handler(CommandHandler("chaines",    chaines))
+    app.add_handler(CommandHandler("recherche",  recherche))
     app.add_handler(CommandHandler("id",         get_id))
 
     # ── Commandes admin ────────────────────
@@ -94,6 +102,8 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_maintenant_chaine,  pattern=r"^now_ch:"))
     app.add_handler(CallbackQueryHandler(callback_maintenant_all,     pattern=r"^now_all:"))
     app.add_handler(CallbackQueryHandler(callback_soir,               pattern=r"^soir:"))
+    app.add_handler(CallbackQueryHandler(callback_prime,              pattern=r"^prime_"))
+    app.add_handler(CallbackQueryHandler(callback_nuit,               pattern=r"^nuit:"))
     app.add_handler(CallbackQueryHandler(callback_film,               pattern=r"^film:"))
     app.add_handler(CallbackQueryHandler(callback_series,             pattern=r"^series:"))
     app.add_handler(CallbackQueryHandler(callback_sport,              pattern=r"^sport_"))
@@ -104,7 +114,7 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_search_page,        pattern=r"^search_page:"))
     app.add_handler(CallbackQueryHandler(callback_admin_logs,         pattern=r"^admin_logs:"))
 
-    logger.info(f"Bot Programme TV démarré.")
+    logger.info("Bot Programme TV démarré.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":

@@ -19,31 +19,22 @@ _cache_prev = {
     "fr": {"titles": set()},
     "gb": {"titles": set()},
 }
-_app = None
-
-def set_app(app):
-    """Stocke la référence à l'application Telegram."""
-    global _app
-    _app = app
-
-def get_app():
-    return _app
 
 def load_epg(country: str) -> ET.Element:
     """Charge l'EPG pour un pays (avec cache)."""
     now   = datetime.now().timestamp()
     entry = _cache[country]
     src   = EPG_SOURCES[country]
-    
+
     if entry["tree"] is None or (now - entry["loaded_at"]) > CACHE_TTL:
         from utils import clean_title
-        
+
         if entry["tree"] is not None:
             _cache_prev[country]["titles"] = {
                 clean_title(p.findtext("title", default=""))
                 for p in entry["tree"].findall("programme")
             }
-        
+
         logger.info(f"Téléchargement EPG {country.upper()}…")
         try:
             r = requests.get(src["url"], timeout=30)
@@ -53,19 +44,8 @@ def load_epg(country: str) -> ET.Element:
             logger.info(f"EPG {country.upper()} chargé.")
         except Exception as e:
             logger.error(f"Échec chargement EPG {country.upper()} : {e}")
-            if _app:
-                import asyncio
-                from config import ADMIN_USER_ID
-                if ADMIN_USER_ID:
-                    asyncio.create_task(
-                        _app.bot.send_message(
-                            chat_id=ADMIN_USER_ID,
-                            text=f"🚨 *Échec EPG {src['label']}*\n`{str(e)[:200]}`",
-                            parse_mode="Markdown"
-                        )
-                    )
             raise
-    
+
     return entry["tree"]
 
 def get_cache(country: str = None):
