@@ -452,9 +452,9 @@ async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
             texte += "\n"
         buttons = []
         if page > 0:
-            buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{mot}:{page-1}"))
+            buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{page-1}"))
         if start_i + SEARCH_PAGE_SIZE < total:
-            buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{mot}:{page+1}"))
+            buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{page+1}"))
         markup = InlineKeyboardMarkup([buttons]) if buttons else None
         if len(texte) > 4096:
             texte = texte[:4090] + "…"
