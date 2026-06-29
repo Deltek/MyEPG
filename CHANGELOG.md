@@ -7,6 +7,10 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- 13 tests unitaires pour `builders.py` : fenêtres horaires, filtres fillers, nouveautés, sport, live en cours (#26)
+- 11 tests unitaires pour `senders.py` : blocs vides, débordement multi-messages, tags inédits (#27)
+
 ### Changed
 - Index EPG par `channel_id` construit une fois au chargement — tous les builders passent de O(n) à O(1) par chaîne (#21, #22, #23)
 - `/resume` et `callback_maintenant_all` : plus de scan complet à chaque appel de chaîne

@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -161,3 +161,218 @@ class TestBuildNuitResults:
             results, jour_label, now_utc = build_nuit_results(root, 0, ch_list=CH_TNT_TEST)
         assert isinstance(results, list)
         assert isinstance(jour_label, str)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Fixtures étendues pour build_type_results, build_sport_results,
+# build_maintenant_sport
+# FIXED_NOW = 2024-01-01 18:00 Paris = 17:00 UTC
+# Sport window (build_sport_results): 06h-00h Paris = 05:00-23:00 UTC
+# ──────────────────────────────────────────────────────────────────────────────
+
+EXTENDED_XML = """<tv>
+  <channel id="TF1.fr"><display-name>FR - TF1</display-name></channel>
+  <channel id="France2.fr"><display-name>FR - France 2</display-name></channel>
+  <channel id="EUROSPORT1.fr"><display-name>Eurosport 1</display-name></channel>
+
+  <!-- Sport sur TNT, fenêtre soir (18:30 UTC = 19:30 Paris) -->
+  <programme start="20240101183000 +0000" stop="20240101190000 +0000" channel="TF1.fr">
+    <title>Rugby du soir</title>
+    <category>sport</category>
+  </programme>
+
+  <!-- Non-sport sur TNT, fenêtre soir -->
+  <programme start="20240101183000 +0000" stop="20240101210000 +0000" channel="France2.fr">
+    <title>Documentaire nature</title>
+    <category>documentaire</category>
+  </programme>
+
+  <!-- Film catégorie + durée 95 min sur TNT, fenêtre soir -->
+  <programme start="20240101190000 +0000" stop="20240101211500 +0000" channel="TF1.fr">
+    <title>Grand film soir</title>
+    <category>film</category>
+  </programme>
+
+  <!-- Sport sur chaîne sport, fenêtre sport (18:30 UTC), stop > now(17:00) -->
+  <programme start="20240101183000 +0000" stop="20240101210000 +0000" channel="EUROSPORT1.fr">
+    <title>Tennis open</title>
+    <category>sport</category>
+  </programme>
+
+  <!-- Filler sport sur chaîne sport -->
+  <programme start="20240101210000 +0000" stop="20240101220000 +0000" channel="EUROSPORT1.fr">
+    <title>A bientot sur eurosport</title>
+    <category>sport</category>
+  </programme>
+
+  <!-- En cours maintenant (16:00-20:00 UTC, now=17:00 UTC) -->
+  <programme start="20240101160000 +0000" stop="20240101200000 +0000" channel="EUROSPORT1.fr">
+    <title>Live sport en cours</title>
+    <category>sport</category>
+  </programme>
+
+  <!-- Filler en cours maintenant -->
+  <programme start="20240101160000 +0000" stop="20240101200000 +0000" channel="EUROSPORT1.fr">
+    <title>Bein sports, le plus grand</title>
+    <category>sport</category>
+  </programme>
+</tv>"""
+
+CH_SPORT_TEST = ["EUROSPORT1.fr"]
+FIXED_UTC = datetime(2024, 1, 1, 17, 0, 0, tzinfo=TZ_PARIS).astimezone()
+
+
+def make_extended_root():
+    return ET.fromstring(EXTENDED_XML)
+
+
+class TestBuildTypeResults:
+    def test_sport_filter_includes_sport_programme(self):
+        from builders import build_type_results
+        from utils import is_sport
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.CH_TNT_FR", CH_TNT_TEST):
+            results, _, _ = build_type_results(root, 0, is_sport)
+        titles = [r["title"] for r in results]
+        assert "Rugby du soir" in titles
+
+    def test_sport_filter_excludes_non_sport(self):
+        from builders import build_type_results
+        from utils import is_sport
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.CH_TNT_FR", CH_TNT_TEST):
+            results, _, _ = build_type_results(root, 0, is_sport)
+        titles = [r["title"] for r in results]
+        assert "Documentaire nature" not in titles
+
+    def test_film_filter_by_category(self):
+        from builders import build_type_results
+        from utils import is_film
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.CH_TNT_FR", CH_TNT_TEST):
+            results, _, _ = build_type_results(root, 0, is_film, min_duration=75)
+        titles = [r["title"] for r in results]
+        assert "Grand film soir" in titles
+
+    def test_min_duration_filters_short_programmes(self):
+        from builders import build_type_results
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.CH_TNT_FR", CH_TNT_TEST):
+            results, _, _ = build_type_results(root, 0, None, min_duration=120)
+        # Grand film soir = 95 min → excluded; Grand film > 120 min → excluded
+        durations = [int((r["stop"] - r["start"]).total_seconds() // 60) for r in results]
+        assert all(d >= 120 for d in durations)
+
+    def test_result_has_required_keys(self):
+        from builders import build_type_results
+        from utils import is_sport
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.CH_TNT_FR", CH_TNT_TEST):
+            results, jour_label, now_utc = build_type_results(root, 0, is_sport)
+        assert isinstance(jour_label, str)
+        if results:
+            for key in ("start", "stop", "title", "ch_id", "channel", "duree"):
+                assert key in results[0]
+
+
+FIXED_UTC_NOW = datetime(2024, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
+
+
+class TestBuildSportResults:
+    def test_includes_sport_in_window(self):
+        from builders import build_sport_results
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.datetime") as mock_dt:
+            mock_dt.now.return_value = FIXED_UTC_NOW
+            results, _, _ = build_sport_results(root, 0, ch_list=CH_SPORT_TEST)
+        titles = [r["title"] for r in results]
+        assert "Tennis open" in titles
+
+    def test_excludes_sport_fillers(self):
+        from builders import build_sport_results
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.datetime") as mock_dt:
+            mock_dt.now.return_value = FIXED_UTC_NOW
+            results, _, _ = build_sport_results(root, 0, ch_list=CH_SPORT_TEST)
+        titles = [r["title"] for r in results]
+        assert "A bientot sur eurosport" not in titles
+
+    def test_excludes_past_programmes(self):
+        from builders import build_sport_results
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.datetime") as mock_dt:
+            mock_dt.now.return_value = FIXED_UTC_NOW
+            results, _, _ = build_sport_results(root, 0, ch_list=CH_SPORT_TEST)
+        for r in results:
+            assert r["ch_id"] in CH_SPORT_TEST
+
+    def test_result_structure(self):
+        from builders import build_sport_results
+        root = make_extended_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.datetime") as mock_dt:
+            mock_dt.now.return_value = FIXED_UTC_NOW
+            results, jour_label, now_utc = build_sport_results(root, 0, ch_list=CH_SPORT_TEST)
+        assert isinstance(jour_label, str)
+        if results:
+            for key in ("start", "stop", "title", "ch_id", "duree", "placeholder"):
+                assert key in results[0]
+
+
+class TestBuildMaintenant:
+    def test_includes_currently_airing(self):
+        from builders import build_maintenant_sport
+        from datetime import timezone
+        root = make_extended_root()
+        fixed_utc = datetime(2024, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
+        with patch("builders.datetime") as mock_dt, \
+             patch("builders.CH_SPORT_FR", CH_SPORT_TEST):
+            mock_dt.now.return_value = fixed_utc
+            results = build_maintenant_sport(root)
+        titles = [r["title"] for r in results]
+        assert "Live sport en cours" in titles
+
+    def test_excludes_sport_fillers(self):
+        from builders import build_maintenant_sport
+        from datetime import timezone
+        root = make_extended_root()
+        fixed_utc = datetime(2024, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
+        with patch("builders.datetime") as mock_dt, \
+             patch("builders.CH_SPORT_FR", CH_SPORT_TEST):
+            mock_dt.now.return_value = fixed_utc
+            results = build_maintenant_sport(root)
+        titles = [r["title"] for r in results]
+        assert "Bein sports, le plus grand" not in titles
+
+    def test_excludes_not_yet_started(self):
+        from builders import build_maintenant_sport
+        from datetime import timezone
+        root = make_extended_root()
+        fixed_utc = datetime(2024, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
+        with patch("builders.datetime") as mock_dt, \
+             patch("builders.CH_SPORT_FR", CH_SPORT_TEST):
+            mock_dt.now.return_value = fixed_utc
+            results = build_maintenant_sport(root)
+        titles = [r["title"] for r in results]
+        # Tennis open starts at 18:30 UTC, now=17:00 → not yet started
+        assert "Tennis open" not in titles
+
+    def test_result_has_duree_reste(self):
+        from builders import build_maintenant_sport
+        from datetime import timezone
+        root = make_extended_root()
+        fixed_utc = datetime(2024, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
+        with patch("builders.datetime") as mock_dt, \
+             patch("builders.CH_SPORT_FR", CH_SPORT_TEST):
+            mock_dt.now.return_value = fixed_utc
+            results = build_maintenant_sport(root)
+        if results:
+            assert "duree_reste" in results[0]
