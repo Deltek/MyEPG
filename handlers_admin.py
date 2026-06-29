@@ -168,7 +168,7 @@ async def refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for country in pays_cibles:
             cache[country]["tree"]      = None
             cache[country]["loaded_at"] = 0
-            load_epg(country)
+            await load_epg(country)
         await msg.edit_text(f"✅ Cache rechargé : {label}")
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")
@@ -271,7 +271,7 @@ async def top_chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pays = context.args[0].lower() if context.args and context.args[0].lower() in EPG_SOURCES else "fr"
     msg  = await update.message.reply_text("🏆 Calcul du top chaînes…")
     try:
-        root     = load_epg(pays)
+        root     = await load_epg(pays)
         from utils import get_channels
         channels = get_channels(root)
         compteur = defaultdict(int)
@@ -294,7 +294,7 @@ async def sante(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pays = context.args[0].lower() if context.args and context.args[0].lower() in EPG_SOURCES else "fr"
     msg  = await update.message.reply_text("🩺 Analyse qualité EPG…")
     try:
-        root  = load_epg(pays)
+        root  = await load_epg(pays)
         flag  = EPG_SOURCES[pays]["label"]
         progs = root.findall("programme")
         total = len(progs)

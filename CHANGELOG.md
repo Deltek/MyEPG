@@ -5,6 +5,13 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.2.4] - 2026-06-29
+
+### Changed
+- `epg_loader` : passage de `requests` (synchrone) à `httpx` async — le bot ne bloque plus l'event loop pendant le rechargement EPG
+
+---
+
 ## [1.2.3] - 2026-06-29
 
 ### Changed
