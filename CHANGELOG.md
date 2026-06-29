@@ -5,6 +5,13 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.2.1] - 2026-06-29
+
+### Fixed
+- Suppression des 7 commandes fantômes déclarées dans BotFather sans handler (`couverture`, `manquantes`, `chainesorphelines`, `cherche_id`, `debug`, `blacklist`, `diff`)
+
+---
+
 ## [1.2] - 2026-06-29
 
 ### Added
