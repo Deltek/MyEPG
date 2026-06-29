@@ -9,7 +9,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from config import EPG_SOURCES, TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY, PAGE_SIZE, SEARCH_PAGE_SIZE
-from utils import sanitize_md, clean_name, _normalize, _strip_accents, parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories, duree_str, is_film, is_serie, is_nouveautes_filler
+from utils import sanitize_md, clean_name, _normalize, _strip_accents, parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories, duree_str, is_film, is_serie, is_sport, is_nouveautes_filler
 from epg_loader import load_epg
 from epg_query import get_programmes_for_channel
 from builders import (
@@ -283,6 +283,24 @@ async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header="🌙 *Nuit 00h–06h – TNT FR*",
+            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
+            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+        )
+    except Exception as e:
+        logger.exception("Erreur callback")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
+async def callback_sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query      = update.callback_query
+    await query.answer()
+    day_offset = int(query.data.split(":", 1)[1])
+    await query.edit_message_text("⏳ Chargement du sport TNT…")
+    try:
+        root = await load_epg("fr")
+        results, jour_label, now_utc = build_type_results(root, day_offset, is_sport)
+        await send_type_blocs(
+            results, jour_label, now_utc,
+            header="🏟 *Sport – TNT FR*",
             edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
         )
