@@ -7,7 +7,6 @@ import sys
 import time
 import gc
 from datetime import datetime, timedelta, timezone
-from collections import defaultdict
 
 from telegram import Update, BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, Application
@@ -18,6 +17,10 @@ from decorators import admin_only
 from logger_utils import logger, get_mem_handler
 from utils import sanitize_md, clean_name, _strip_accents
 from epg_loader import load_epg, get_cache, get_cache_prev, reset_cache
+from admin_stats import (
+    fmt_uptime, fmt_duration, cache_age_min, cache_expire_min,
+    seconds_until_expire, top_channels, epg_quality, pct, bar,
+)
 import xml.etree.ElementTree as ET
 
 # ──────────────────────────────────────────
@@ -42,6 +45,7 @@ async def post_init(app: Application) -> None:
         BotCommand("doublons",    "Programmes en doublon TNT"),
         BotCommand("trending",    "Titres tendance du jour"),
         BotCommand("chaine",      "Prochains programmes d'une chaîne"),
+        BotCommand("prochain",    "Prochain programme d'une chaîne"),
         BotCommand("chaines",     "Parcourir toutes les chaînes"),
         BotCommand("recherche",   "Rechercher un programme"),
         BotCommand("aide",        "Afficher l'aide"),
@@ -99,9 +103,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @admin_only
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uptime_s = int(time.time() - BOT_START_TS)
-    h, rem   = divmod(uptime_s, 3600)
-    m, s     = divmod(rem, 60)
+    now_ts      = datetime.now().timestamp()
     cache_lines = []
     cache = get_cache()
     for country, entry in cache.items():
@@ -109,8 +111,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if entry["tree"] is None:
             cache_lines.append(f"  {flag} ❌ non chargé")
         else:
-            age_min    = int((datetime.now().timestamp() - entry["loaded_at"]) // 60)
-            expire_min = max(0, CACHE_TTL // 60 - age_min)
+            expire_min = cache_expire_min(entry["loaded_at"], now_ts, CACHE_TTL)
             nb_prog    = len(entry["tree"].findall("programme"))
             cache_lines.append(f"  {flag} ✅ {nb_prog} prog · expire dans {expire_min}min")
 
@@ -123,7 +124,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"📊 *Status – v{sanitize_md(BOT_VERSION)}*\n\n"
-        f"⏱ Uptime : `{h}h{m:02d}m{s:02d}s`\n"
+        f"⏱ Uptime : `{fmt_uptime(time.time() - BOT_START_TS)}`\n"
         f"👥 Users : {len(get_known_users())}\n\n"
         f"💾 *Cache :*\n" + "\n".join(cache_lines) + "\n\n"
         f"📋 *Dernière erreur :*\n  {last_err_txt}",
@@ -139,13 +140,10 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @admin_only
 async def version(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uptime_s = int(time.time() - BOT_START_TS)
-    h, rem   = divmod(uptime_s, 3600)
-    m, s     = divmod(rem, 60)
     await update.message.reply_text(
         f"📦 *Bot Programme TV*\n"
         f"  Version : `{BOT_VERSION}`\n"
-        f"  Uptime  : `{h}h{m:02d}m{s:02d}s`\n"
+        f"  Uptime  : `{fmt_uptime(time.time() - BOT_START_TS)}`\n"
         f"  Python  : `{sys.version.split()[0]}`",
         parse_mode="MarkdownV2"
     )
@@ -204,8 +202,7 @@ async def cache_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
         size_kb    = int(len(ET.tostring(root)) / 1024)
         loaded_at  = datetime.fromtimestamp(entry["loaded_at"], tz=TZ_PARIS)
         expire_at  = datetime.fromtimestamp(entry["loaded_at"] + CACHE_TTL, tz=TZ_PARIS)
-        age_min    = int((datetime.now().timestamp() - entry["loaded_at"]) // 60)
-        expire_min = max(0, CACHE_TTL // 60 - age_min)
+        expire_min = cache_expire_min(entry["loaded_at"], datetime.now().timestamp(), CACHE_TTL)
         lignes.append(
             f"{flag} ✅\n"
             f"  📡 {nb_ch} chaînes  \\|  📋 {nb_prog} programmes\n"
@@ -228,8 +225,9 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         nb_ch     = len(root.findall("channel"))
         nb_prog   = len(root.findall("programme"))
         loaded_at = datetime.fromtimestamp(entry["loaded_at"], tz=TZ_PARIS)
-        age_min   = int((datetime.now().timestamp() - entry["loaded_at"]) // 60)
-        expire    = max(0, CACHE_TTL // 60 - age_min)
+        now_ts    = datetime.now().timestamp()
+        age_min   = cache_age_min(entry["loaded_at"], now_ts)
+        expire    = cache_expire_min(entry["loaded_at"], now_ts, CACHE_TTL)
         lignes.append(
             f"{flag}\n"
             f"  📡 {nb_ch} chaînes  \\|  📋 {nb_prog} programmes\n"
@@ -274,12 +272,7 @@ async def top_chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
         root     = await load_epg(pays)
         from utils import get_channels
         channels = get_channels(root)
-        compteur = defaultdict(int)
-        for prog in root.findall("programme"):
-            cid = prog.get("channel", "")
-            if cid:
-                compteur[cid] += 1
-        top   = sorted(compteur.items(), key=lambda x: x[1], reverse=True)[:10]
+        top   = top_channels(root.findall("programme"), limit=10)
         flag  = EPG_SOURCES[pays]["label"]
         texte = f"🏆 *Top 10 – {flag}*\n\n"
         for i, (cid, nb) in enumerate(top, 1):
@@ -296,25 +289,17 @@ async def sante(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         root  = await load_epg(pays)
         flag  = EPG_SOURCES[pays]["label"]
-        progs = root.findall("programme")
-        total = len(progs)
+        q     = epg_quality(root.findall("programme"))
+        total = q["total"]
         if not total:
             await msg.edit_text("❌ Aucun programme chargé.")
             return
-        avec_desc = sum(1 for p in progs if p.findtext("desc", "").strip())
-        avec_cat  = sum(1 for p in progs if p.find("category") is not None)
-        avec_new  = sum(1 for p in progs if p.find("new") is not None)
-        avec_img  = sum(1 for p in progs if p.find("icon") is not None)
-
-        def pct(n): return f"{n / total * 100:.1f}%"
-        def bar(n, t, w=10): return "█" * int(n / t * w) + "░" * (w - int(n / t * w))
-
         await msg.edit_text(
             f"🩺 *Qualité EPG – {flag}*\n_{total} programmes_\n\n"
-            f"📝 Description  `{bar(avec_desc, total)}` {sanitize_md(pct(avec_desc))}\n"
-            f"📂 Catégorie    `{bar(avec_cat,  total)}` {sanitize_md(pct(avec_cat))}\n"
-            f"🆕 Tag nouveau  `{bar(avec_new,  total)}` {sanitize_md(pct(avec_new))}\n"
-            f"🖼 Image        `{bar(avec_img,  total)}` {sanitize_md(pct(avec_img))}\n",
+            f"📝 Description  `{bar(q['desc'], total)}` {sanitize_md(pct(q['desc'], total))}\n"
+            f"📂 Catégorie    `{bar(q['cat'],  total)}` {sanitize_md(pct(q['cat'],  total))}\n"
+            f"🆕 Tag nouveau  `{bar(q['new'],  total)}` {sanitize_md(pct(q['new'],  total))}\n"
+            f"🖼 Image        `{bar(q['img'],  total)}` {sanitize_md(pct(q['img'],  total))}\n",
             parse_mode="MarkdownV2"
         )
     except Exception as e:
@@ -384,36 +369,28 @@ async def prochainexpire(update: Update, context: ContextTypes.DEFAULT_TYPE):
             continue
         expire_ts = entry["loaded_at"] + CACHE_TTL
         expire_dt = datetime.fromtimestamp(expire_ts, tz=TZ_PARIS)
-        reste_s   = int(expire_ts - now_ts)
+        reste_s   = seconds_until_expire(entry["loaded_at"], now_ts, CACHE_TTL)
         if reste_s <= 0:
             lignes.append(f"{flag} — ⚠️ *Expiré*")
         else:
-            h, rem = divmod(reste_s, 3600)
-            m, s   = divmod(rem, 60)
-            duree  = f"{h}h{m:02d}m{s:02d}s" if h else f"{m}min{s:02d}s"
+            duree  = fmt_duration(reste_s)
             lignes.append(f"{flag} — ✅ expire à *{expire_dt.strftime('%H:%M:%S')}* _\\(dans {duree}\\)_")
             if prochain is None or expire_ts < prochain:
                 prochain = expire_ts
     if prochain:
         p_dt    = datetime.fromtimestamp(prochain, tz=TZ_PARIS)
-        reste_p = int(prochain - now_ts)
-        hh, rem = divmod(reste_p, 3600)
-        mm, ss  = divmod(rem, 60)
-        duree_p = f"{hh}h{mm:02d}m{ss:02d}s" if hh else f"{mm}min{ss:02d}s"
+        duree_p = fmt_duration(prochain - now_ts)
         lignes.append(f"\n🔔 Prochain dans *{duree_p}* à {p_dt.strftime('%H:%M:%S')}")
     await update.message.reply_text("\n".join(lignes), parse_mode="MarkdownV2")
 
 @admin_only
 async def nbusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uptime_s = int(time.time() - BOT_START_TS)
-    h, rem   = divmod(uptime_s, 3600)
-    m, s     = divmod(rem, 60)
     total    = len(get_known_users())
     is_admin = ADMIN_USER_ID in get_known_users()
     await update.message.reply_text(
         f"👥 *Utilisateurs distincts*\n\n"
         f"  Depuis le démarrage : *{total}*\n"
-        f"  ⏱ Uptime : `{h}h{m:02d}m{s:02d}s`\n"
+        f"  ⏱ Uptime : `{fmt_uptime(time.time() - BOT_START_TS)}`\n"
         f"  🔧 Admin compté : {'✅' if is_admin else '❌'}\n"
         f"  _{total - (1 if is_admin else 0)} utilisateur\\(s\\) hors admin_",
         parse_mode="MarkdownV2"

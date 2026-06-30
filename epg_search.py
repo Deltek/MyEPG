@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from config import TZ_PARIS, EPG_SOURCES, SEARCH_PAGE_SIZE
 from utils import sanitize_md, get_channels
 from epg_loader import load_epg, get_epg_channels
-from analytics import search_programmes
+from analytics import search_programmes, paginate
 from logger_utils import logger
 
 def _channels(root, country: str) -> dict:
@@ -27,9 +27,7 @@ async def do_recherche(update: Update, mot: str, pays: str, page: int = 0, conte
             cache[cache_key] = search_programmes(root.findall("programme"), channels, mot)
         results = cache[cache_key]
         flag         = EPG_SOURCES[pays]["label"]
-        total        = len(results)
-        start_i      = page * SEARCH_PAGE_SIZE
-        page_results = results[start_i:start_i + SEARCH_PAGE_SIZE]
+        page_results, total, has_prev, has_next = paginate(results, page, SEARCH_PAGE_SIZE)
         if not page_results:
             await query.message.reply_text(
                 f"🔍 *{sanitize_md(mot)}* — {flag}\n❌ Aucun résultat\\.",
@@ -46,9 +44,9 @@ async def do_recherche(update: Update, mot: str, pays: str, page: int = 0, conte
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         buttons = []
-        if page > 0:
+        if has_prev:
             buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{page-1}"))
-        if start_i + SEARCH_PAGE_SIZE < total:
+        if has_next:
             buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{page+1}"))
         markup = InlineKeyboardMarkup([buttons]) if buttons else None
         if len(texte) > 4000:

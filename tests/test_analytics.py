@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-from analytics import compute_doublons, compute_trending, search_programmes
+from analytics import compute_doublons, compute_trending, search_programmes, paginate
 
 # Fenêtre de référence : now = 2024-01-01 17:00 UTC
 NOW = datetime(2024, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
@@ -195,3 +195,51 @@ class TestSearchProgrammes:
         ]
         res = search_programmes(progs, CHANNELS, "match")
         assert [r["title"] for r in res] == ["Match ok"]
+
+
+class TestPaginate:
+    ITEMS = list(range(23))  # 0..22
+
+    def test_first_page_has_next_no_prev(self):
+        items, total, has_prev, has_next = paginate(self.ITEMS, page=0, page_size=8)
+        assert items == list(range(0, 8))
+        assert total == 23
+        assert has_prev is False
+        assert has_next is True
+
+    def test_middle_page_has_both(self):
+        items, total, has_prev, has_next = paginate(self.ITEMS, page=1, page_size=8)
+        assert items == list(range(8, 16))
+        assert has_prev is True
+        assert has_next is True
+
+    def test_last_partial_page_no_next(self):
+        items, total, has_prev, has_next = paginate(self.ITEMS, page=2, page_size=8)
+        assert items == list(range(16, 23))  # 7 éléments
+        assert has_prev is True
+        assert has_next is False
+
+    def test_page_beyond_range_is_empty(self):
+        items, total, has_prev, has_next = paginate(self.ITEMS, page=5, page_size=8)
+        assert items == []
+        assert has_next is False
+        assert has_prev is True
+
+    def test_exact_multiple_last_page_no_next(self):
+        items = list(range(16))  # 2 pages pleines de 8
+        page_items, total, has_prev, has_next = paginate(items, page=1, page_size=8)
+        assert page_items == list(range(8, 16))
+        assert has_next is False  # pas de 3e page vide
+
+    def test_single_page_no_buttons(self):
+        items, total, has_prev, has_next = paginate([1, 2, 3], page=0, page_size=8)
+        assert items == [1, 2, 3]
+        assert has_prev is False
+        assert has_next is False
+
+    def test_empty_input(self):
+        items, total, has_prev, has_next = paginate([], page=0, page_size=8)
+        assert items == []
+        assert total == 0
+        assert has_prev is False
+        assert has_next is False

@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🎬 *Par genre*\n"
         "/film  /series  /sport `[pays]`  /sporttnt  /nouveautes\n\n"
         "🔍 *Recherche*\n"
-        "/recherche `<mot>`  /chaine `<nom>`  /chaines\n\n"
+        "/recherche `<mot>`  /chaine `<nom>`  /prochain `<nom>`  /chaines\n\n"
         "📈 *Tendances*\n"
         "/trending  /doublons\n\n"
         "🌍 Pays : `fr` 🇫🇷  \\|  `gb` 🇬🇧\n"
@@ -383,6 +383,61 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
             texte   += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(p['title'])}{new_tag}\n"
             if p.get("desc"):
                 texte += f"   📝 {sanitize_md(p['desc'])}\n"
+        await msg.edit_text(texte, parse_mode="MarkdownV2")
+    except Exception as e:
+        logger.exception("Erreur handler")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
+async def prochain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text(
+            "Usage : `/prochain <nom>`\nEx: `/prochain tf1`, `/prochain bbc1`",
+            parse_mode="MarkdownV2"
+        )
+        return
+    nom_saisi = " ".join(context.args)
+    cid       = get_ch_id_by_name(nom_saisi)
+    if not cid:
+        suggestions = difflib.get_close_matches(
+            nom_saisi.lower().strip(), CH_ALIASES.keys(), n=5, cutoff=0.5
+        )
+        if not suggestions:
+            suggestions = [k for k in CH_ALIASES if k.startswith(nom_saisi.lower().strip()[:2])][:5]
+        hint = (
+            f"\nSuggestions : {', '.join(sanitize_md(s) for s in suggestions)}"
+            if suggestions else "\nEx: tf1, m6, arte, bbc1…"
+        )
+        await update.message.reply_text(
+            f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\." + hint,
+            parse_mode="MarkdownV2"
+        )
+        return
+    country = "gb" if cid.endswith(".uk") else "fr"
+    msg = await update.message.reply_text("⏳ Chargement…")
+    try:
+        root     = await load_epg(country)
+        channels = _channels(root, country)
+        nom      = clean_name(channels.get(cid, cid))
+        progs    = get_programmes_for_channel(root, cid, limit=3, country=country)
+        now      = datetime.now(tz=timezone.utc)
+        current  = next((p for p in progs if p["start"] <= now < p["stop"]), None)
+        nxt      = next((p for p in progs if p["start"] > now), None)
+        if not current and not nxt:
+            await msg.edit_text(f"❌ Aucun programme à venir pour *{sanitize_md(nom)}*\\.", parse_mode="MarkdownV2")
+            return
+
+        def _ligne(p):
+            h_start = p["start"].astimezone(TZ_PARIS).strftime("%H:%M")
+            h_stop  = p["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
+            new_tag = " 🆕" if p.get("new") else ""
+            return f"{h_start}–{h_stop}  {sanitize_md(p['title'])}{new_tag}"
+
+        texte = f"📺 *{sanitize_md(nom)}*\n"
+        if current:
+            texte += f"🔴 En ce moment : {_ligne(current)}\n"
+        if nxt:
+            label = "Ensuite" if current else "Prochain"
+            texte += f"▶️ {label} : {_ligne(nxt)}\n"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
