@@ -7,8 +7,15 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.10.1] - 2026-06-30
+
 ### Changed
 - +33 tests unitaires sur les fonctions pures jusqu'ici non couvertes : `format_programme` (#72), `is_epg_placeholder`/`get_categories`/`now_paris` (#73), getters `epg_loader` + `reset_cache` (#74), branche index-cache de `epg_query` (#75), fenêtre nuit de `build_nuit_results` (#76) — 137 tests au total
+
+### CI
+- Actions GitHub mises à jour pour Node 24 : `checkout@v5`, `setup-python@v6` — supprime le warning de dépréciation Node 20 (#80)
 
 ---
 
