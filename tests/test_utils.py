@@ -6,6 +6,7 @@ from utils import (
     sanitize_md, truncate, duree_str,
     is_sport_filler, is_nouveautes_filler, is_film, is_serie,
     get_channels, get_ch_id_by_name,
+    get_categories, is_epg_placeholder, now_paris,
 )
 
 
@@ -221,3 +222,60 @@ class TestGetChIdByName:
 
     def test_unknown_returns_none(self):
         assert get_ch_id_by_name("chaine_inconnue") is None
+
+
+def _prog_with_cats(*cats):
+    p = ET.Element("programme")
+    for c in cats:
+        e = ET.SubElement(p, "category")
+        e.text = c
+    return p
+
+
+class TestGetCategories:
+    def test_single_category(self):
+        assert get_categories(_prog_with_cats("sport")) == "sport"
+
+    def test_multiple_categories_joined(self):
+        assert get_categories(_prog_with_cats("film", "drame")) == "film · drame"
+
+    def test_no_category_returns_empty(self):
+        assert get_categories(_prog_with_cats()) == ""
+
+    def test_empty_text_ignored(self):
+        p = ET.Element("programme")
+        ET.SubElement(p, "category")  # pas de .text
+        ET.SubElement(p, "category").text = "sport"
+        assert get_categories(p) == "sport"
+
+
+class TestIsEpgPlaceholder:
+    def test_colon_in_title_never_placeholder(self):
+        # un ":" signale un vrai contenu (ex. "Foot: PSG-OM")
+        assert is_epg_placeholder("Football: PSG-OM", "") is False
+
+    def test_generic_sport_word_is_placeholder(self):
+        assert is_epg_placeholder("Football", "") is True
+
+    def test_generic_word_accent_case_insensitive(self):
+        assert is_epg_placeholder("ATHLETISME", "") is True
+
+    def test_real_title_not_placeholder(self):
+        assert is_epg_placeholder("Documentaire animalier", "") is False
+
+    def test_placeholder_desc_prefix(self):
+        assert is_epg_placeholder("Le match", "Suivez un match d'une compétition de football") is True
+
+    def test_colon_overrides_placeholder_desc(self):
+        assert is_epg_placeholder("Match: détails", "Suivez un match d'une compétition") is False
+
+
+class TestNowParis:
+    def test_timezone_aware_paris(self):
+        n = now_paris()
+        assert n.tzinfo is not None
+        assert "Paris" in str(n.tzinfo)
+
+    def test_close_to_utc_now(self):
+        delta = abs((now_paris() - datetime.now(timezone.utc)).total_seconds())
+        assert delta < 5

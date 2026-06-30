@@ -10,6 +10,59 @@ TZ_PARIS = ZoneInfo("Europe/Paris")
 _START = datetime(2099, 6, 1, 19, 0, 0, tzinfo=timezone.utc)
 _STOP  = datetime(2099, 6, 1, 21, 0, 0, tzinfo=timezone.utc)
 
+# Encadre l'instant présent → toujours "en cours"
+_PAST   = datetime(2000, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+_FUTURE = datetime(2099, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+
+class TestFormatProgramme:
+    def _prog(self, **over):
+        base = {"start": _START, "stop": _STOP, "title": "Mon film"}
+        base.update(over)
+        return base
+
+    def test_title_and_time_range(self):
+        from senders import format_programme
+        out = format_programme(self._prog())
+        assert "Mon film" in out
+        # _START 19:00 UTC → 21:00 Paris (CEST) ; _STOP 21:00 UTC → 23:00 Paris
+        assert "21:00" in out and "23:00" in out
+
+    def test_en_cours_adds_red_dot(self):
+        from senders import format_programme
+        out = format_programme(self._prog(start=_PAST, stop=_FUTURE))
+        assert out.startswith("🔴 ")
+
+    def test_future_not_en_cours(self):
+        from senders import format_programme
+        out = format_programme(self._prog())  # 2099 → futur
+        assert "🔴" not in out
+
+    def test_new_tag_present(self):
+        from senders import format_programme
+        out = format_programme(self._prog(new=True))
+        assert "🆕" in out
+
+    def test_no_new_tag_by_default(self):
+        from senders import format_programme
+        out = format_programme(self._prog())
+        assert "🆕" not in out
+
+    def test_cat_line(self):
+        from senders import format_programme
+        out = format_programme(self._prog(cat="Sport"))
+        assert "📂" in out and "Sport" in out
+
+    def test_desc_line(self):
+        from senders import format_programme
+        out = format_programme(self._prog(desc="Une description suffisamment longue"))
+        assert "📝" in out
+
+    def test_no_optional_lines_when_absent(self):
+        from senders import format_programme
+        out = format_programme(self._prog())
+        assert "📂" not in out and "📝" not in out
+
 
 class Collector:
     """Coroutine collectrice — capture chaque appel."""
