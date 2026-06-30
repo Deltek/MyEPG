@@ -136,10 +136,9 @@ async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
-    parts      = query.data.split(":", 1)[1]
-    pays_day   = parts.split(":", 1)
-    pays       = pays_day[0] if len(pays_day) > 1 else "fr"
-    day_offset = int(pays_day[-1])
+    action, day_str = query.data.split(":", 1)
+    pays       = action.split("_")[1] if "_" in action else "fr"
+    day_offset = int(day_str)
     await query.edit_message_text("⏳ Chargement du sport…")
     try:
         ch_list           = CH_SPORT_BY_COUNTRY.get(pays, CH_SPORT_FR)
