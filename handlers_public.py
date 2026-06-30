@@ -303,11 +303,13 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         end_utc  = now_utc + timedelta(hours=6)
         channels = _channels(root, "fr")
         ch_set   = set(CH_TNT_FR)
+        index    = get_epg_index("fr")
         title_map = defaultdict(list)
-        for prog in root.findall("programme"):
+        progs_iter = (p for cid in ch_set for p in index.get(cid, [])) if index else (
+            p for p in root.findall("programme") if p.get("channel", "") in ch_set
+        )
+        for prog in progs_iter:
             cid = prog.get("channel", "")
-            if cid not in ch_set:
-                continue
             try:
                 start = parse_xmltv_time(prog.get("start", ""))
             except ValueError:
@@ -343,11 +345,13 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now_utc = datetime.now(tz=timezone.utc)
         end_utc = now_utc + timedelta(hours=24)
         ch_set  = set(CH_TNT_FR) | set(CH_SPORT_FR)
+        index   = get_epg_index("fr")
         counter = Counter()
-        for prog in root.findall("programme"):
+        progs_iter = (p for cid in ch_set for p in index.get(cid, [])) if index else (
+            p for p in root.findall("programme") if p.get("channel", "") in ch_set
+        )
+        for prog in progs_iter:
             cid = prog.get("channel", "")
-            if cid not in ch_set:
-                continue
             try:
                 start = parse_xmltv_time(prog.get("start", ""))
                 stop  = parse_xmltv_time(prog.get("stop",  ""))
