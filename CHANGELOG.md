@@ -9,6 +9,7 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ### Changed
 - Calculs purs des commandes admin extraits dans `admin_stats.py` (sans dépendance Telegram) : uptime, âge/expiration cache, top chaînes, qualité EPG — 25 tests unitaires, dont les bornes (total=0, cache expiré) (#77)
+- Arithmétique de pagination de `/recherche` extraite dans `analytics.paginate` — 7 tests sur les bornes (page partielle finale, multiple exact, hors plage) (#78)
 
 ---
 
