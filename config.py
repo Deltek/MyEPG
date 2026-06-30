@@ -15,7 +15,7 @@ if not BOT_TOKEN:
 
 CACHE_TTL        = 3600
 PAGE_SIZE        = 20
-SEARCH_PAGE_SIZE = 5
+SEARCH_PAGE_SIZE = 8
 TZ_PARIS         = ZoneInfo("Europe/Paris")
 
 try:
