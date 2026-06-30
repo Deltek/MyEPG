@@ -92,14 +92,18 @@ async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
-    day_offset = int(query.data.split(":", 1)[1])
+    action, day_str = query.data.split(":", 1)
+    pays       = action.split("_")[1] if "_" in action else "fr"
+    day_offset = int(day_str)
+    flag       = EPG_SOURCES[pays]["label"]
     await query.edit_message_text("⏳ Chargement des films…")
     try:
-        root              = await load_epg("fr")
-        results, jour_label, now_utc = build_type_results(root, day_offset, is_film, min_duration=75)
+        ch_set            = set(CH_TNT_BY_COUNTRY.get(pays, CH_TNT_FR))
+        root              = await load_epg(pays)
+        results, jour_label, now_utc = build_type_results(root, day_offset, is_film, min_duration=75, ch_set=ch_set, country=pays)
         await send_type_blocs(
             results, jour_label, now_utc,
-            header="🎬 *Films de la soirée – TNT FR*",
+            header=f"🎬 *Films de la soirée – {flag}*",
             edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
         )
@@ -110,14 +114,18 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
-    day_offset = int(query.data.split(":", 1)[1])
+    action, day_str = query.data.split(":", 1)
+    pays       = action.split("_")[1] if "_" in action else "fr"
+    day_offset = int(day_str)
+    flag       = EPG_SOURCES[pays]["label"]
     await query.edit_message_text("⏳ Chargement des séries…")
     try:
-        root              = await load_epg("fr")
-        results, jour_label, now_utc = build_type_results(root, day_offset, is_serie)
+        ch_set            = set(CH_TNT_BY_COUNTRY.get(pays, CH_TNT_FR))
+        root              = await load_epg(pays)
+        results, jour_label, now_utc = build_type_results(root, day_offset, is_serie, ch_set=ch_set, country=pays)
         await send_type_blocs(
             results, jour_label, now_utc,
-            header="📺 *Séries de la soirée – TNT FR*",
+            header=f"📺 *Séries de la soirée – {flag}*",
             edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
         )
@@ -303,7 +311,7 @@ async def callback_sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results, jour_label, now_utc = build_type_results(root, day_offset, is_sport)
         await send_type_blocs(
             results, jour_label, now_utc,
-            header="🏟 *Sport – TNT FR*",
+            header=f"🏟 *Sport – TNT FR* — {len(results)} programme\\(s\\)",
             edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
             send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
         )
