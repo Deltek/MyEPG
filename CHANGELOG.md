@@ -7,6 +7,9 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `/prochain <chaine>` — affiche le programme en cours et le suivant d'une chaîne (suggestions fuzzy si nom inconnu) (#52)
+
 ### Changed
 - Calculs purs des commandes admin extraits dans `admin_stats.py` (sans dépendance Telegram) : uptime, âge/expiration cache, top chaînes, qualité EPG — 25 tests unitaires, dont les bornes (total=0, cache expiré) (#77)
 - Arithmétique de pagination de `/recherche` extraite dans `analytics.paginate` — 7 tests sur les bornes (page partielle finale, multiple exact, hors plage) (#78)

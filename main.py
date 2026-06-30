@@ -19,7 +19,7 @@ from handlers_admin import (
 from handlers_public import (
     start, aide, maintenant, soir, prime, demain, nuit,
     film, series, sport, sporttnt, live, nouveautes,
-    resume, soir5, doublons, trending, chaine, chaines, recherche,
+    resume, soir5, doublons, trending, chaine, prochain, chaines, recherche,
     get_id
 )
 from callbacks import (
@@ -76,6 +76,7 @@ def main():
     app.add_handler(CommandHandler("doublons",   doublons))
     app.add_handler(CommandHandler("trending",   trending))
     app.add_handler(CommandHandler("chaine",     chaine))
+    app.add_handler(CommandHandler("prochain",   prochain))
     app.add_handler(CommandHandler("chaines",    chaines))
     app.add_handler(CommandHandler("recherche",  recherche))
     app.add_handler(CommandHandler("id",         get_id))

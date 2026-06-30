@@ -45,6 +45,7 @@ async def post_init(app: Application) -> None:
         BotCommand("doublons",    "Programmes en doublon TNT"),
         BotCommand("trending",    "Titres tendance du jour"),
         BotCommand("chaine",      "Prochains programmes d'une chaîne"),
+        BotCommand("prochain",    "Prochain programme d'une chaîne"),
         BotCommand("chaines",     "Parcourir toutes les chaînes"),
         BotCommand("recherche",   "Rechercher un programme"),
         BotCommand("aide",        "Afficher l'aide"),
