@@ -3,7 +3,6 @@
 # ============================================================
 
 from datetime import datetime, timedelta, timezone
-from collections import defaultdict, Counter
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -13,15 +12,16 @@ import difflib
 from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, EPG_SOURCES, CH_ALIASES
 from utils import (
     now_paris, get_ch_id_by_name, sanitize_md, clean_name,
-    get_channels, parse_xmltv_time, clean_title, duree_str,
+    get_channels, duree_str,
     is_film, is_serie, is_sport
 )
-from epg_loader import load_epg, get_epg_channels, get_epg_index
+from epg_loader import load_epg, get_epg_channels
 from epg_query import get_programmes_for_channel
 from builders import (
     build_soir_results, build_type_results, build_sport_results,
-    build_maintenant_sport, build_prime_results, build_nuit_results
+    build_maintenant_sport, build_prime_results, build_nuit_results, iter_progs
 )
+from analytics import compute_doublons, compute_trending
 from senders import send_soir_blocs, send_type_blocs, _SEP
 from keyboards import country_keyboard, day_keyboard, chaines_rapides_keyboard
 from logger_utils import logger
@@ -303,25 +303,7 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         end_utc  = now_utc + timedelta(hours=6)
         channels = _channels(root, "fr")
         ch_set   = set(CH_TNT_FR)
-        index    = get_epg_index("fr")
-        title_map = defaultdict(list)
-        progs_iter = (p for cid in ch_set for p in index.get(cid, [])) if index else (
-            p for p in root.findall("programme") if p.get("channel", "") in ch_set
-        )
-        for prog in progs_iter:
-            cid = prog.get("channel", "")
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-            except ValueError:
-                continue
-            if not (now_utc <= start < end_utc):
-                continue
-            title = clean_title(prog.findtext("title", default=""))
-            nom   = clean_name(channels.get(cid, cid))
-            h     = start.astimezone(TZ_PARIS).strftime("%H:%M")
-            title_map[title].append(f"{nom} ({h})")
-        doublons_list = [(t, chs) for t, chs in title_map.items() if len(chs) > 1]
-        doublons_list.sort(key=lambda x: -len(x[1]))
+        doublons_list = compute_doublons(iter_progs(root, ch_set, "fr"), channels, now_utc, end_utc)
         if not doublons_list:
             await msg.edit_text("✅ Aucun doublon TNT sur les 6 prochaines heures.")
             return
@@ -345,24 +327,7 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now_utc = datetime.now(tz=timezone.utc)
         end_utc = now_utc + timedelta(hours=24)
         ch_set  = set(CH_TNT_FR) | set(CH_SPORT_FR)
-        index   = get_epg_index("fr")
-        counter = Counter()
-        progs_iter = (p for cid in ch_set for p in index.get(cid, [])) if index else (
-            p for p in root.findall("programme") if p.get("channel", "") in ch_set
-        )
-        for prog in progs_iter:
-            cid = prog.get("channel", "")
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-                stop  = parse_xmltv_time(prog.get("stop",  ""))
-            except ValueError:
-                continue
-            if start >= end_utc or stop <= now_utc:
-                continue
-            title = clean_title(prog.findtext("title", default=""))
-            if title:
-                counter[title] += 1
-        top = [(t, n) for t, n in counter.most_common(15) if n > 1]
+        top = compute_trending(iter_progs(root, ch_set, "fr"), now_utc, end_utc)
         if not top:
             await msg.edit_text("📈 Aucun titre tendance trouvé aujourd'hui.")
             return

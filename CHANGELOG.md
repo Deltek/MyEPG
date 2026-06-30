@@ -7,6 +7,10 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Logiques `/doublons`, `/trending` et `/recherche` extraites dans `analytics.py` (sans dépendance Telegram) — 19 tests unitaires sur les bornes de fenêtre temporelle (#49)
+- `_iter_progs` promu en `builders.iter_progs` (réutilisable) (#49)
+
 ---
 
 ## [1.9.0] - 2026-06-30
