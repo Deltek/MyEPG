@@ -3,28 +3,32 @@
 # ============================================================
 
 from datetime import datetime, timedelta, timezone
-from collections import defaultdict, Counter
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 
 import difflib
 
-from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, EPG_SOURCES, SEARCH_PAGE_SIZE, CH_ALIASES
+from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, EPG_SOURCES, CH_ALIASES
 from utils import (
-    now_paris, get_ch_id_by_name, sanitize_md, clean_name, _normalize, _strip_accents,
-    get_channels, parse_xmltv_time, clean_title, clean_desc, duree_str,
+    now_paris, get_ch_id_by_name, sanitize_md, clean_name,
+    get_channels, duree_str,
     is_film, is_serie, is_sport
 )
-from epg_loader import load_epg
+from epg_loader import load_epg, get_epg_channels
 from epg_query import get_programmes_for_channel
 from builders import (
     build_soir_results, build_type_results, build_sport_results,
-    build_maintenant_sport, build_prime_results, build_nuit_results
+    build_maintenant_sport, build_prime_results, build_nuit_results, iter_progs
 )
+from analytics import compute_doublons, compute_trending
 from senders import send_soir_blocs, send_type_blocs, _SEP
 from keyboards import country_keyboard, day_keyboard, chaines_rapides_keyboard
 from logger_utils import logger
+
+def _channels(root, country: str) -> dict:
+    cached = get_epg_channels(country)
+    return cached if cached else get_channels(root)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -52,7 +56,7 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
     try:
         root     = await load_epg(country)
         now      = datetime.now(tz=timezone.utc)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         nom      = clean_name(channels.get(cid, cid))
         progs    = get_programmes_for_channel(root, cid, limit=10, country=country)
         current  = next((p for p in progs if p["start"] <= now < p["stop"]), None)
@@ -101,7 +105,7 @@ async def _maintenant_sport(update: Update):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -228,7 +232,7 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur /live")
@@ -245,7 +249,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         root     = await load_epg("fr")
         now      = datetime.now(tz=timezone.utc)
-        channels = get_channels(root)
+        channels = _channels(root, "fr")
         texte    = f"📋 *Résumé – TNT FR*\n🕐 {now.astimezone(TZ_PARIS).strftime('%H:%M')}\n\n"
         for cid in CH_TNT_FR:
             progs   = get_programmes_for_channel(root, cid, limit=5, country="fr")
@@ -257,7 +261,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
             new_tag = " 🆕" if current.get("new") else ""
             texte  += f"📺 *{sanitize_md(nom)}* — {sanitize_md(current['title'])}{new_tag} _\\(–{h_stop}\\)_\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -267,7 +271,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🗓 Chargement des 5 prochains soirs…")
     try:
         root     = await load_epg("fr")
-        channels = get_channels(root)
+        channels = _channels(root, "fr")
         vedettes = EPG_SOURCES["fr"]["vedettes"]
         texte    = "🗓 *5 Prochains soirs – TNT FR*\n\n"
         for day_offset in range(5):
@@ -285,7 +289,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"📺 *{sanitize_md(nom)}* {h}  {sanitize_md(r['title'])}{new_tag}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -297,25 +301,9 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         root     = await load_epg("fr")
         now_utc  = datetime.now(tz=timezone.utc)
         end_utc  = now_utc + timedelta(hours=6)
-        channels = get_channels(root)
+        channels = _channels(root, "fr")
         ch_set   = set(CH_TNT_FR)
-        title_map = defaultdict(list)
-        for prog in root.findall("programme"):
-            cid = prog.get("channel", "")
-            if cid not in ch_set:
-                continue
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-            except ValueError:
-                continue
-            if not (now_utc <= start < end_utc):
-                continue
-            title = clean_title(prog.findtext("title", default=""))
-            nom   = clean_name(channels.get(cid, cid))
-            h     = start.astimezone(TZ_PARIS).strftime("%H:%M")
-            title_map[title].append(f"{nom} ({h})")
-        doublons_list = [(t, chs) for t, chs in title_map.items() if len(chs) > 1]
-        doublons_list.sort(key=lambda x: -len(x[1]))
+        doublons_list = compute_doublons(iter_progs(root, ch_set, "fr"), channels, now_utc, end_utc)
         if not doublons_list:
             await msg.edit_text("✅ Aucun doublon TNT sur les 6 prochaines heures.")
             return
@@ -326,7 +314,7 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"  📺 {sanitize_md(ch)}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -339,22 +327,7 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now_utc = datetime.now(tz=timezone.utc)
         end_utc = now_utc + timedelta(hours=24)
         ch_set  = set(CH_TNT_FR) | set(CH_SPORT_FR)
-        counter = Counter()
-        for prog in root.findall("programme"):
-            cid = prog.get("channel", "")
-            if cid not in ch_set:
-                continue
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-                stop  = parse_xmltv_time(prog.get("stop",  ""))
-            except ValueError:
-                continue
-            if start >= end_utc or stop <= now_utc:
-                continue
-            title = clean_title(prog.findtext("title", default=""))
-            if title:
-                counter[title] += 1
-        top = [(t, n) for t, n in counter.most_common(15) if n > 1]
+        top = compute_trending(iter_progs(root, ch_set, "fr"), now_utc, end_utc)
         if not top:
             await msg.edit_text("📈 Aucun titre tendance trouvé aujourd'hui.")
             return
@@ -394,7 +367,7 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("⏳ Chargement…")
     try:
         root     = await load_epg(country)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         nom      = clean_name(channels.get(cid, cid))
         progs    = get_programmes_for_channel(root, cid, limit=8, country=country)
         now      = datetime.now(tz=timezone.utc)
@@ -429,68 +402,12 @@ async def recherche(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     mot = " ".join(context.args)
+    context.user_data.pop("search_mot", None)
     context.user_data["search_mot"] = mot
     await update.message.reply_text(
         f"🔍 *{sanitize_md(mot)}* — Quel pays ?", parse_mode="MarkdownV2",
         reply_markup=country_keyboard("search")
     )
-
-async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
-    """Effectue une recherche EPG et envoie les résultats paginés."""
-    query = update.callback_query
-    try:
-        root     = await load_epg(pays)
-        channels = get_channels(root)
-        mot_norm = _normalize(_strip_accents(mot))
-        results  = []
-        for prog in root.findall("programme"):
-            cid   = prog.get("channel", "")
-            title = clean_title(prog.findtext("title", default=""))
-            desc  = prog.findtext("desc") or ""
-            if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
-                continue
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-                stop  = parse_xmltv_time(prog.get("stop",  ""))
-            except ValueError:
-                continue
-            results.append({
-                "start": start, "stop": stop, "title": title,
-                "desc": clean_desc(desc, title),
-                "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
-            })
-        results.sort(key=lambda x: x["start"])
-        flag         = EPG_SOURCES[pays]["label"]
-        total        = len(results)
-        start_i      = page * SEARCH_PAGE_SIZE
-        page_results = results[start_i:start_i + SEARCH_PAGE_SIZE]
-        if not page_results:
-            await query.message.reply_text(
-                f"🔍 *{sanitize_md(mot)}* — {flag}\n❌ Aucun résultat\\.",
-                parse_mode="MarkdownV2"
-            )
-            return
-        texte = f"🔍 *{sanitize_md(mot)}* — {flag}\n_{total} résultat\\(s\\) — page {page + 1}_\n\n"
-        for r in page_results:
-            h_start = r["start"].astimezone(TZ_PARIS).strftime("%d/%m %H:%M")
-            h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
-            texte  += f"📺 *{sanitize_md(r['channel'])}*  🕐 {h_start}–{h_stop}\n"
-            texte  += f"▶️ {sanitize_md(r['title'])}\n"
-            if r.get("desc"):
-                texte += f"   📝 {sanitize_md(r['desc'])}\n"
-            texte += "\n"
-        buttons = []
-        if page > 0:
-            buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{page-1}"))
-        if start_i + SEARCH_PAGE_SIZE < total:
-            buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{page+1}"))
-        markup = InlineKeyboardMarkup([buttons]) if buttons else None
-        if len(texte) > 4000:
-            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
-        await query.message.reply_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
-    except Exception as e:
-        logger.exception("Erreur _do_recherche")
-        await query.message.reply_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(

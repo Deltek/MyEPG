@@ -10,7 +10,7 @@ from telegram.ext import ContextTypes
 
 from config import EPG_SOURCES, TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY, PAGE_SIZE, SEARCH_PAGE_SIZE
 from utils import sanitize_md, clean_name, _normalize, _strip_accents, parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories, duree_str, is_film, is_serie, is_sport, is_nouveautes_filler
-from epg_loader import load_epg
+from epg_loader import load_epg, get_epg_channels, get_epg_index
 from epg_query import get_programmes_for_channel
 from builders import (
     build_soir_results, build_type_results, build_sport_results,
@@ -18,7 +18,19 @@ from builders import (
 )
 from senders import send_soir_blocs, send_type_blocs
 from keyboards import chaines_rapides_keyboard
+from epg_search import do_recherche
 from logger_utils import logger
+
+def _channels(root, country: str) -> dict:
+    cached = get_epg_channels(country)
+    return cached if cached else get_channels(root)
+
+def make_fns(query) -> dict:
+    """Retourne {edit_fn, send_fn} bindés sur query (MarkdownV2)."""
+    return {
+        "edit_fn": lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
+        "send_fn": lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+    }
 
 async def callback_maintenant_country(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query   = update.callback_query
@@ -47,7 +59,7 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
     try:
         root     = await load_epg(country)
         now      = datetime.now(tz=timezone.utc)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         texte    = f"📡 *En ce moment – {EPG_SOURCES[country]['label']}*\n\n"
         for cid in EPG_SOURCES[country]["vedettes"]:
             progs   = get_programmes_for_channel(root, cid, limit=10, country=country)
@@ -82,8 +94,7 @@ async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results, channels, jour_label, now_utc = build_soir_results(root, day_offset)
         await send_soir_blocs(
             results, channels, jour_label, now_utc,
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
         )
     except Exception as e:
         logger.exception("Erreur callback")
@@ -104,8 +115,7 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"🎬 *Films de la soirée – {flag}*",
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
         )
     except Exception as e:
         logger.exception("Erreur callback")
@@ -126,8 +136,7 @@ async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"📺 *Séries de la soirée – {flag}*",
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
         )
     except Exception as e:
         logger.exception("Erreur callback")
@@ -136,10 +145,9 @@ async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
-    parts      = query.data.split(":", 1)[1]
-    pays_day   = parts.split(":", 1)
-    pays       = pays_day[0] if len(pays_day) > 1 else "fr"
-    day_offset = int(pays_day[-1])
+    action, day_str = query.data.split(":", 1)
+    pays       = action.split("_")[1] if "_" in action else "fr"
+    day_offset = int(day_str)
     await query.edit_message_text("⏳ Chargement du sport…")
     try:
         ch_list           = CH_SPORT_BY_COUNTRY.get(pays, CH_SPORT_FR)
@@ -149,8 +157,7 @@ async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"⚽ *Sport – {flag}* — {len(results)} programme\\(s\\)",
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
             ch_order_list=ch_list,
         )
     except Exception as e:
@@ -181,8 +188,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
             await send_type_blocs(
                 results, jour_label, now_utc,
                 header="🆕 *Inédits Sport*",
-                edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-                send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+                **make_fns(query),
                 ch_order_list=CH_SPORT_FR,
             )
         else:
@@ -191,8 +197,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
             await send_type_blocs(
                 results, jour_label, now_utc,
                 header="🆕 *Inédits TNT FR*",
-                edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-                send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+                **make_fns(query),
             )
     except Exception as e:
         logger.exception("Erreur callback")
@@ -208,7 +213,7 @@ async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TY
     await query.edit_message_text("⏳ Chargement…")
     try:
         root     = await load_epg(country)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         all_ch   = sorted(channels.items(), key=lambda x: clean_name(x[1]).lower())
         flag     = EPG_SOURCES[country]["label"]
         total    = len(all_ch)
@@ -243,11 +248,9 @@ async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_
     await query.edit_message_text(f"🔍 Recherche de *{sanitize_md(mot)}*…", parse_mode="MarkdownV2")
     if pays == "all":
         for p in EPG_SOURCES:
-            from handlers_public import _do_recherche
-            await _do_recherche(update, mot, p)
+            await do_recherche(update, mot, p, context=context)
     else:
-        from handlers_public import _do_recherche
-        await _do_recherche(update, mot, pays)
+        await do_recherche(update, mot, pays, context=context)
 
 async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -259,8 +262,7 @@ async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("❌ Mot\\-clé perdu\\. Relance /recherche\\.", parse_mode="MarkdownV2")
         return
     await query.edit_message_text(f"🔍 Page {page + 1}…")
-    from handlers_public import _do_recherche
-    await _do_recherche(update, mot, pays, page)
+    await do_recherche(update, mot, pays, page, context=context)
 
 async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -276,8 +278,7 @@ async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"🌟 *Prime time 20h–22h30 – {flag}*",
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
         )
     except Exception as e:
         logger.exception("Erreur callback")
@@ -294,8 +295,7 @@ async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header="🌙 *Nuit 00h–06h – TNT FR*",
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
         )
     except Exception as e:
         logger.exception("Erreur callback")
@@ -312,8 +312,7 @@ async def callback_sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"🏟 *Sport – TNT FR* — {len(results)} programme\\(s\\)",
-            edit_fn=lambda t, **kw: query.edit_message_text(t, parse_mode="MarkdownV2", **kw),
-            send_fn=lambda t, **kw: query.message.reply_text(t, parse_mode="MarkdownV2", **kw),
+            **make_fns(query),
         )
     except Exception as e:
         logger.exception("Erreur callback")
