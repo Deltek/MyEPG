@@ -16,7 +16,7 @@ from utils import (
     get_channels, parse_xmltv_time, clean_title, clean_desc, duree_str,
     is_film, is_serie, is_sport
 )
-from epg_loader import load_epg
+from epg_loader import load_epg, get_epg_channels, get_epg_index
 from epg_query import get_programmes_for_channel
 from builders import (
     build_soir_results, build_type_results, build_sport_results,
@@ -25,6 +25,10 @@ from builders import (
 from senders import send_soir_blocs, send_type_blocs, _SEP
 from keyboards import country_keyboard, day_keyboard, chaines_rapides_keyboard
 from logger_utils import logger
+
+def _channels(root, country: str) -> dict:
+    cached = get_epg_channels(country)
+    return cached if cached else get_channels(root)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -52,7 +56,7 @@ async def _send_maintenant_chaine(reply_fn, country: str, cid: str):
     try:
         root     = await load_epg(country)
         now      = datetime.now(tz=timezone.utc)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         nom      = clean_name(channels.get(cid, cid))
         progs    = get_programmes_for_channel(root, cid, limit=10, country=country)
         current  = next((p for p in progs if p["start"] <= now < p["stop"]), None)
@@ -245,7 +249,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         root     = await load_epg("fr")
         now      = datetime.now(tz=timezone.utc)
-        channels = get_channels(root)
+        channels = _channels(root, "fr")
         texte    = f"📋 *Résumé – TNT FR*\n🕐 {now.astimezone(TZ_PARIS).strftime('%H:%M')}\n\n"
         for cid in CH_TNT_FR:
             progs   = get_programmes_for_channel(root, cid, limit=5, country="fr")
@@ -267,7 +271,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🗓 Chargement des 5 prochains soirs…")
     try:
         root     = await load_epg("fr")
-        channels = get_channels(root)
+        channels = _channels(root, "fr")
         vedettes = EPG_SOURCES["fr"]["vedettes"]
         texte    = "🗓 *5 Prochains soirs – TNT FR*\n\n"
         for day_offset in range(5):
@@ -297,13 +301,15 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         root     = await load_epg("fr")
         now_utc  = datetime.now(tz=timezone.utc)
         end_utc  = now_utc + timedelta(hours=6)
-        channels = get_channels(root)
+        channels = _channels(root, "fr")
         ch_set   = set(CH_TNT_FR)
+        index    = get_epg_index("fr")
         title_map = defaultdict(list)
-        for prog in root.findall("programme"):
+        progs_iter = (p for cid in ch_set for p in index.get(cid, [])) if index else (
+            p for p in root.findall("programme") if p.get("channel", "") in ch_set
+        )
+        for prog in progs_iter:
             cid = prog.get("channel", "")
-            if cid not in ch_set:
-                continue
             try:
                 start = parse_xmltv_time(prog.get("start", ""))
             except ValueError:
@@ -339,11 +345,13 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now_utc = datetime.now(tz=timezone.utc)
         end_utc = now_utc + timedelta(hours=24)
         ch_set  = set(CH_TNT_FR) | set(CH_SPORT_FR)
+        index   = get_epg_index("fr")
         counter = Counter()
-        for prog in root.findall("programme"):
+        progs_iter = (p for cid in ch_set for p in index.get(cid, [])) if index else (
+            p for p in root.findall("programme") if p.get("channel", "") in ch_set
+        )
+        for prog in progs_iter:
             cid = prog.get("channel", "")
-            if cid not in ch_set:
-                continue
             try:
                 start = parse_xmltv_time(prog.get("start", ""))
                 stop  = parse_xmltv_time(prog.get("stop",  ""))
@@ -394,7 +402,7 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("⏳ Chargement…")
     try:
         root     = await load_epg(country)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         nom      = clean_name(channels.get(cid, cid))
         progs    = get_programmes_for_channel(root, cid, limit=8, country=country)
         now      = datetime.now(tz=timezone.utc)
@@ -436,31 +444,37 @@ async def recherche(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=country_keyboard("search")
     )
 
-async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
+async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0, context=None):
     """Effectue une recherche EPG et envoie les résultats paginés."""
     query = update.callback_query
     try:
-        root     = await load_epg(pays)
-        channels = get_channels(root)
-        mot_norm = _normalize(_strip_accents(mot))
-        results  = []
-        for prog in root.findall("programme"):
-            cid   = prog.get("channel", "")
-            title = clean_title(prog.findtext("title", default=""))
-            desc  = prog.findtext("desc") or ""
-            if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
-                continue
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-                stop  = parse_xmltv_time(prog.get("stop",  ""))
-            except ValueError:
-                continue
-            results.append({
-                "start": start, "stop": stop, "title": title,
-                "desc": clean_desc(desc, title),
-                "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
-            })
-        results.sort(key=lambda x: x["start"])
+        cache_key = (mot, pays)
+        user_data = context.user_data if context else {}
+        cache     = user_data.setdefault("search_cache", {})
+        if cache_key not in cache:
+            root     = await load_epg(pays)
+            channels = _channels(root, pays)
+            mot_norm = _normalize(_strip_accents(mot))
+            results  = []
+            for prog in root.findall("programme"):
+                cid   = prog.get("channel", "")
+                title = clean_title(prog.findtext("title", default=""))
+                desc  = prog.findtext("desc") or ""
+                if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
+                    continue
+                try:
+                    start = parse_xmltv_time(prog.get("start", ""))
+                    stop  = parse_xmltv_time(prog.get("stop",  ""))
+                except ValueError:
+                    continue
+                results.append({
+                    "start": start, "stop": stop, "title": title,
+                    "desc": clean_desc(desc, title),
+                    "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
+                })
+            results.sort(key=lambda x: x["start"])
+            cache[cache_key] = results
+        results = cache[cache_key]
         flag         = EPG_SOURCES[pays]["label"]
         total        = len(results)
         start_i      = page * SEARCH_PAGE_SIZE

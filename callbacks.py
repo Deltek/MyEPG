@@ -10,7 +10,7 @@ from telegram.ext import ContextTypes
 
 from config import EPG_SOURCES, TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY, PAGE_SIZE, SEARCH_PAGE_SIZE
 from utils import sanitize_md, clean_name, _normalize, _strip_accents, parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories, duree_str, is_film, is_serie, is_sport, is_nouveautes_filler
-from epg_loader import load_epg
+from epg_loader import load_epg, get_epg_channels, get_epg_index
 from epg_query import get_programmes_for_channel
 from builders import (
     build_soir_results, build_type_results, build_sport_results,
@@ -19,6 +19,10 @@ from builders import (
 from senders import send_soir_blocs, send_type_blocs
 from keyboards import chaines_rapides_keyboard
 from logger_utils import logger
+
+def _channels(root, country: str) -> dict:
+    cached = get_epg_channels(country)
+    return cached if cached else get_channels(root)
 
 async def callback_maintenant_country(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query   = update.callback_query
@@ -47,7 +51,7 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
     try:
         root     = await load_epg(country)
         now      = datetime.now(tz=timezone.utc)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         texte    = f"📡 *En ce moment – {EPG_SOURCES[country]['label']}*\n\n"
         for cid in EPG_SOURCES[country]["vedettes"]:
             progs   = get_programmes_for_channel(root, cid, limit=10, country=country)
@@ -207,7 +211,7 @@ async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TY
     await query.edit_message_text("⏳ Chargement…")
     try:
         root     = await load_epg(country)
-        channels = get_channels(root)
+        channels = _channels(root, country)
         all_ch   = sorted(channels.items(), key=lambda x: clean_name(x[1]).lower())
         flag     = EPG_SOURCES[country]["label"]
         total    = len(all_ch)
@@ -243,10 +247,10 @@ async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_
     if pays == "all":
         for p in EPG_SOURCES:
             from handlers_public import _do_recherche
-            await _do_recherche(update, mot, p)
+            await _do_recherche(update, mot, p, context=context)
     else:
         from handlers_public import _do_recherche
-        await _do_recherche(update, mot, pays)
+        await _do_recherche(update, mot, pays, context=context)
 
 async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -259,7 +263,7 @@ async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     await query.edit_message_text(f"🔍 Page {page + 1}…")
     from handlers_public import _do_recherche
-    await _do_recherche(update, mot, pays, page)
+    await _do_recherche(update, mot, pays, page, context=context)
 
 async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
