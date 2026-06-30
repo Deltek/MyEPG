@@ -5,16 +5,17 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 ## ✨ Fonctionnalités
 
 ### 📡 Consultations EPG
-- **`/maintenant`** — Programme en direct (par pays ou chaîne)
+- **`/maintenant [chaîne|sport]`** — Programme en direct (par pays ou chaîne, suggestions fuzzy si nom inconnu)
 - **`/soir`** — Soirée TNT FR (19h-00h)
-- **`/prime`** — Prime time 20h-22h30
+- **`/prime [pays]`** — Prime time 20h-22h30
 - **`/demain`** — Programme de demain soir
 - **`/nuit`** — Programmes nuit 00h-06h
 
 ### 🎬 Filtres Spécialisés
-- **`/film`** — Films de la soirée (TNT FR)
-- **`/series`** — Séries de la soirée (TNT FR)
+- **`/film [pays]`** — Films de la soirée (FR/GB)
+- **`/series [pays]`** — Séries de la soirée (FR/GB)
 - **`/sport [pays]`** — Sports du jour (FR/GB)
+- **`/sporttnt`** — Sport du jour sur les chaînes TNT FR
 - **`/live [filtre]`** — Lives en cours (canal, bein, rmc...)
 - **`/nouveautes`** — Programmes inédits
 
@@ -23,9 +24,9 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/soir5`** — Les 5 prochains soirs (vedettes)
 - **`/doublons`** — Programmes en doublon TNT (6h)
 - **`/trending`** — Titres tendance du jour
-- **`/chaine <nom>`** — Prochains programmes d'une chaîne
+- **`/chaine <nom>`** — Prochains programmes d'une chaîne (suggestions fuzzy si nom inconnu)
 - **`/chaines`** — Parcourir toutes les chaînes
-- **`/recherche <mot>`** — Recherche full-text
+- **`/recherche <mot>`** — Recherche full-text (8 résultats par page)
 
 ### 🔧 Admin (réservé)
 - **`/admin`** — Panneau de contrôle
@@ -34,30 +35,30 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/refresh [pays]`** — Forcer rechargement
 - **`/logs`** — Dernières erreurs
 - **`/stats`** — Statistiques EPG
-- Et 15+ autres commandes...
+- Et 10+ autres commandes...
 
 ---
 
 ## 🏗️ Architecture Modulaire
 
-### Structures des Fichiers
+### Structure des Fichiers
 
 ```
 myepg/
-├── config.py              # Configuration (tokens, chaînes, blacklists)
-├── logger_utils.py        # Logging en mémoire
+├── config.py              # Configuration (tokens, chaînes, constantes)
+├── logger_utils.py        # Logging en mémoire circulaire
 ├── utils.py               # Utilitaires (parsing, nettoyage, détection)
-├── epg_loader.py          # Chargement & cache EPG
+├── epg_loader.py          # Chargement & cache EPG (index channel_id → programmes)
 ├── epg_query.py           # Requêtes EPG (extraction, formatage)
 ├── builders.py            # Construction résultats filtrés
-├── senders.py             # Formatage & envoi messages
+├── senders.py             # Formatage & envoi messages Telegram
 ├── keyboards.py           # Claviers Telegram inline
 ├── decorators.py          # Décorateurs (admin_only, etc.)
 ├── state.py               # État global (utilisateurs, temps démarrage)
 ├── handlers_public.py     # Handlers commandes publiques
-├── handlers_admin.py      # Handlers commandes admin (à créer)
-├── callbacks.py           # Gestionnaires de callbacks (à créer)
-├── main.py                # Point d'entrée du bot (à créer)
+├── handlers_admin.py      # Handlers commandes admin
+├── callbacks.py           # Gestionnaires de callbacks inline
+├── main.py                # Point d'entrée du bot
 └── requirements.txt       # Dépendances
 ```
 
@@ -138,7 +139,7 @@ python3 main.py
 ```python
 CACHE_TTL        = 3600  # Cache EPG expire après 1h
 PAGE_SIZE        = 20    # Résultats par page (listes chaînes)
-SEARCH_PAGE_SIZE = 5     # Résultats par page (recherche)
+SEARCH_PAGE_SIZE = 8     # Résultats par page (recherche)
 ```
 
 ---
@@ -168,12 +169,12 @@ SEARCH_PAGE_SIZE = 5     # Résultats par page (recherche)
 - Ou contient pattern S##E## ou "saison #"
 
 ### Sports
-- Chaînes sport + Filtrage fillers
+- Chaînes sport + filtrage fillers
 - Détecte placeholders EPG
 - Exclut les annonces génériques
 
 ### Inédits
-- Filtre "new" EPG
+- Filtre `<new/>` EPG
 - Exclut news, météo, jeux TV récurrents
 - Sport : exclut fillers sport
 
@@ -184,13 +185,11 @@ SEARCH_PAGE_SIZE = 5     # Résultats par page (recherche)
 ```
 EPG Source (gzip XML)
         ↓
-    load_epg() [cache 1h]
+    load_epg() [cache 1h, index channel_id → programmes]
         ↓
-    ET.parse() (ElementTree)
+    builders.build_*() [filtrage O(1) par chaîne]
         ↓
-    builders.build_*() [filtrage]
-        ↓
-    senders.send_*() [formatage]
+    senders.send_*() [formatage MarkdownV2]
         ↓
     Telegram API
         ↓
@@ -202,14 +201,14 @@ EPG Source (gzip XML)
 ## 📦 Dépendances
 
 - **`python-telegram-bot`** (≥20.0) — Bot Telegram async
-- **`requests`** — Téléchargement EPG
+- **`httpx`** — Téléchargement EPG async
 - **`psutil`** (optionnel) — Monitoring mémoire
 - **`python-dotenv`** (optionnel) — Variables `.env`
 
 ### Installation complète
 
 ```bash
-pip install python-telegram-bot>=20.0 requests psutil python-dotenv
+pip install python-telegram-bot>=20.0 httpx psutil python-dotenv
 ```
 
 ---
@@ -229,10 +228,6 @@ Le bot recharge automatiquement après 1 heure. Force : `/refresh`
 - Vérifier mémoire : `/memoire` (admin)
 - Forcer GC : `/gc` (admin)
 
-### Chaînes manquantes
-- Vérifier EPG source : `/testepg` (admin)
-- Lister orphelines : `/chainesorphelines` (admin)
-
 ---
 
 ## 📊 Commandes Admin
@@ -248,17 +243,11 @@ Le bot recharge automatiquement après 1 heure. Force : `/refresh`
 - `/stats` — Statistiques
 - `/testepg [pays]` — Tester source EPG
 - `/refresh [pays]` — Recharger cache
-- `/diff [pays]` — Diff avec snapshot précédent
 
 ### Chaînes
 - `/top [pays]` — Top 10 chaînes
-- `/cherche_id <nom>` — Trouver channel ID
-- `/debug <id>` — Programmes bruts d'une chaîne
-- `/couverture [pays]` — Couverture 24h
-- `/manquantes [pays]` — Chaînes absentes de listes
 
 ### Utilitaires
-- `/blacklist` — Afficher les blacklists
 - `/gc` — Garbage collection
 - `/nbusers` — Utilisateurs distincts
 
