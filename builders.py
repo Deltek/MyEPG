@@ -18,7 +18,7 @@ def _get_channels(root, country: str) -> dict:
     cached = get_epg_channels(country)
     return cached if cached else get_channels(root)
 
-def _iter_progs(root, cid_set: set, country: str):
+def iter_progs(root, cid_set: set, country: str):
     """Itère les programmes des chaînes demandées via l'index cache (ou root.findall en fallback)."""
     from epg_loader import get_epg_index
     index = get_epg_index(country)
@@ -48,7 +48,7 @@ def build_soir_results(root, day_offset: int, country: str = "fr"):
     ch_tnt_set                     = set(CH_TNT_FR)
     results                        = []
 
-    for prog in _iter_progs(root, ch_tnt_set, country):
+    for prog in iter_progs(root, ch_tnt_set, country):
         cid       = prog.get("channel", "")
         start_str = prog.get("start", "")
         stop_str  = prog.get("stop",  "")
@@ -78,7 +78,7 @@ def build_type_results(root, day_offset: int, filter_fn, min_duration: int = 0, 
     search_set                     = ch_set if ch_set is not None else set(CH_TNT_FR)
     results                        = []
 
-    for prog in _iter_progs(root, search_set, country):
+    for prog in iter_progs(root, search_set, country):
         if filter_fn is not None and not filter_fn(prog):
             continue
         cid       = prog.get("channel", "")
@@ -119,7 +119,7 @@ def build_sport_results(root, day_offset: int, ch_list: list = None, country: st
     sport_set                      = set(ch_list)
     results                        = []
 
-    for prog in _iter_progs(root, sport_set, country):
+    for prog in iter_progs(root, sport_set, country):
         cid       = prog.get("channel", "")
         start_str = prog.get("start", "")
         stop_str  = prog.get("stop",  "")
@@ -158,7 +158,7 @@ def build_maintenant_sport(root, filtre: str = None, country: str = "fr") -> lis
     if filtre == "canal":
         sport_set = {cid for cid in sport_set if cid.startswith("CANAL+") or cid == "C+SPORT.fr"}
     results   = []
-    for prog in _iter_progs(root, sport_set, country):
+    for prog in iter_progs(root, sport_set, country):
         cid = prog.get("channel", "")
         try:
             start = parse_xmltv_time(prog.get("start", ""))
@@ -188,7 +188,7 @@ def build_nouveautes_tnt(root, day_offset: int, country: str = "fr"):
     start_utc, end_utc, jour_label = _time_window(day_offset, 19, 0)
     ch_set                         = set(CH_TNT_FR)
     results                        = []
-    for prog in _iter_progs(root, ch_set, country):
+    for prog in iter_progs(root, ch_set, country):
         if prog.find("new") is None:
             continue
         cid = prog.get("channel", "")
@@ -222,7 +222,7 @@ def build_prime_results(root, day_offset: int, ch_set: set = None, country: str 
     end_utc    = base.replace(hour=22, minute=30, second=0, microsecond=0).astimezone(timezone.utc)
     search_set = ch_set if ch_set is not None else set(CH_TNT_FR)
     results    = []
-    for prog in _iter_progs(root, search_set, country):
+    for prog in iter_progs(root, search_set, country):
         cid       = prog.get("channel", "")
         start_str = prog.get("start", "")
         stop_str  = prog.get("stop",  "")
@@ -255,7 +255,7 @@ def build_nuit_results(root, day_offset: int, ch_list: list = None, country: str
     start_utc, end_utc, jour_label = _time_window(day_offset, 0, 6)
     search_set                     = set(ch_list)
     results                        = []
-    for prog in _iter_progs(root, search_set, country):
+    for prog in iter_progs(root, search_set, country):
         cid       = prog.get("channel", "")
         start_str = prog.get("start", "")
         stop_str  = prog.get("stop",  "")

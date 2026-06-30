@@ -5,11 +5,9 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import TZ_PARIS, EPG_SOURCES, SEARCH_PAGE_SIZE
-from utils import (
-    sanitize_md, clean_name, _normalize, _strip_accents,
-    parse_xmltv_time, get_channels, clean_title, clean_desc
-)
+from utils import sanitize_md, get_channels
 from epg_loader import load_epg, get_epg_channels
+from analytics import search_programmes
 from logger_utils import logger
 
 def _channels(root, country: str) -> dict:
@@ -26,26 +24,7 @@ async def do_recherche(update: Update, mot: str, pays: str, page: int = 0, conte
         if cache_key not in cache:
             root     = await load_epg(pays)
             channels = _channels(root, pays)
-            mot_norm = _normalize(_strip_accents(mot))
-            results  = []
-            for prog in root.findall("programme"):
-                cid   = prog.get("channel", "")
-                title = clean_title(prog.findtext("title", default=""))
-                desc  = prog.findtext("desc") or ""
-                if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
-                    continue
-                try:
-                    start = parse_xmltv_time(prog.get("start", ""))
-                    stop  = parse_xmltv_time(prog.get("stop",  ""))
-                except ValueError:
-                    continue
-                results.append({
-                    "start": start, "stop": stop, "title": title,
-                    "desc": clean_desc(desc, title),
-                    "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
-                })
-            results.sort(key=lambda x: x["start"])
-            cache[cache_key] = results
+            cache[cache_key] = search_programmes(root.findall("programme"), channels, mot)
         results = cache[cache_key]
         flag         = EPG_SOURCES[pays]["label"]
         total        = len(results)
