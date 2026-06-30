@@ -9,6 +9,17 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [1.9.0] - 2026-06-30
+
+### Fixed
+- `/maintenant <chaine>` : suggestions fuzzy si le nom est inconnu (#38)
+- `/sporttnt` : l'en-tête affiche désormais le nombre de programmes (#39)
+- `import difflib` / `CH_ALIASES` déplacés en haut de `handlers_public.py` (#48)
+- `/film gb` et `/series gb` : paramètre pays pris en compte (#54)
+- `SEARCH_PAGE_SIZE` porté de 5 à 8 (#61)
+
+---
+
 ## [1.8.0] - 2026-06-29
 
 ### Fixed
