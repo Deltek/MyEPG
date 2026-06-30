@@ -7,9 +7,26 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.10.0] - 2026-06-30
+
+### Fixed
+- Troncature des messages longs : coupure sur fin de ligne dans 5 handlers (`/live`, `/resume`, `/soir5`, `/doublons`, sport en cours) — plus de span MarkdownV2 cassé (#40)
+- `/sport gb` : le pays était ignoré (parsing fragile du `callback_data`) (#44)
+- `/recherche` : `search_mot` nettoyé entre deux recherches — plus de pollution de session (#45)
+
 ### Changed
-- Logiques `/doublons`, `/trending` et `/recherche` extraites dans `analytics.py` (sans dépendance Telegram) — 19 tests unitaires sur les bornes de fenêtre temporelle (#49)
+- `/doublons` et `/trending` utilisent l'index EPG — O(n) → O(1) par chaîne (#41)
+- `/recherche` met ses résultats en cache (`user_data`) — pagination instantanée dès la 2e page (#42)
+- `get_channels(root)` lu depuis le cache EPG dans tous les handlers (#43)
+- Helper `make_fns(query)` — élimine ~9 paires de lambdas dupliquées dans `callbacks.py` (#46)
+- Recherche extraite dans `epg_search.py` (module neutre) — fin des imports circulaires lazy (#47)
+- Logiques `/doublons`, `/trending`, `/recherche` extraites dans `analytics.py` (testable) + 19 tests sur les bornes de fenêtre (#49)
 - `_iter_progs` promu en `builders.iter_progs` (réutilisable) (#49)
+
+### Docs
+- README à jour : commandes v1.9.0, suppression des commandes fantômes, `httpx` (#65)
 
 ---
 
