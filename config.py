@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 BOT_TOKEN     = os.getenv("BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
-BOT_VERSION   = "1.10.0"
+BOT_VERSION   = "1.10.1"
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN non défini dans l'environnement !")
