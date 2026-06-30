@@ -7,6 +7,10 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.11.0] - 2026-06-30
+
 ### Added
 - `/prochain <chaine>` — affiche le programme en cours et le suivant d'une chaîne (suggestions fuzzy si nom inconnu) (#52)
 
