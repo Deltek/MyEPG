@@ -101,7 +101,7 @@ async def _maintenant_sport(update: Update):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -228,7 +228,7 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"   📝 {sanitize_md(r['desc'])}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur /live")
@@ -257,7 +257,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
             new_tag = " 🆕" if current.get("new") else ""
             texte  += f"📺 *{sanitize_md(nom)}* — {sanitize_md(current['title'])}{new_tag} _\\(–{h_stop}\\)_\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -285,7 +285,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"📺 *{sanitize_md(nom)}* {h}  {sanitize_md(r['title'])}{new_tag}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -326,7 +326,7 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texte += f"  📺 {sanitize_md(ch)}\n"
             texte += "\n"
         if len(texte) > 4096:
-            texte = texte[:4090] + "…"
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
         await msg.edit_text(texte, parse_mode="MarkdownV2")
     except Exception as e:
         logger.exception("Erreur handler")
@@ -429,6 +429,7 @@ async def recherche(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     mot = " ".join(context.args)
+    context.user_data.pop("search_mot", None)
     context.user_data["search_mot"] = mot
     await update.message.reply_text(
         f"🔍 *{sanitize_md(mot)}* — Quel pays ?", parse_mode="MarkdownV2",
