@@ -153,6 +153,26 @@ class TestBuildNouveautesTnt:
         assert all("ᴺᵉʷ" not in t for t in titles)
 
 
+# Fenêtre nuit (day_offset=0, FIXED_NOW=2024-01-01 18:00 Paris)
+#   = [2023-12-31 23:00 UTC, 2024-01-01 05:00 UTC)
+NUIT_XML = """<tv>
+  <channel id="TF1.fr"><display-name>FR - TF1</display-name></channel>
+  <!-- 01:00-03:00 UTC = 02:00-04:00 Paris → DANS la fenêtre nuit -->
+  <programme start="20240101010000 +0000" stop="20240101030000 +0000" channel="TF1.fr">
+    <title>Film de nuit</title>
+    <desc>Un long métrage diffusé en pleine nuit.</desc>
+  </programme>
+  <!-- 09:00 UTC = 10:00 Paris → HORS fenêtre -->
+  <programme start="20240101090000 +0000" stop="20240101100000 +0000" channel="TF1.fr">
+    <title>Programme de jour</title>
+  </programme>
+</tv>"""
+
+
+def make_nuit_root():
+    return ET.fromstring(NUIT_XML)
+
+
 class TestBuildNuitResults:
     def test_returns_list_and_metadata(self):
         from builders import build_nuit_results
@@ -161,6 +181,31 @@ class TestBuildNuitResults:
             results, jour_label, now_utc = build_nuit_results(root, 0, ch_list=CH_TNT_TEST)
         assert isinstance(results, list)
         assert isinstance(jour_label, str)
+
+    def test_includes_programme_in_nuit_window(self):
+        from builders import build_nuit_results
+        root = make_nuit_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW):
+            results, _, _ = build_nuit_results(root, 0, ch_list=["TF1.fr"])
+        titles = [r["title"] for r in results]
+        assert "Film de nuit" in titles
+
+    def test_excludes_daytime_programme(self):
+        from builders import build_nuit_results
+        root = make_nuit_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW):
+            results, _, _ = build_nuit_results(root, 0, ch_list=["TF1.fr"])
+        titles = [r["title"] for r in results]
+        assert "Programme de jour" not in titles
+
+    def test_result_structure(self):
+        from builders import build_nuit_results
+        root = make_nuit_root()
+        with patch("builders.now_paris", return_value=FIXED_NOW):
+            results, _, _ = build_nuit_results(root, 0, ch_list=["TF1.fr"])
+        assert results
+        for key in ("start", "stop", "title", "ch_id", "channel", "duree", "cats"):
+            assert key in results[0]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
