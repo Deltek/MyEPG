@@ -8,7 +8,9 @@ from collections import defaultdict, Counter
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, EPG_SOURCES, SEARCH_PAGE_SIZE
+import difflib
+
+from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, EPG_SOURCES, SEARCH_PAGE_SIZE, CH_ALIASES
 from utils import (
     now_paris, get_ch_id_by_name, sanitize_md, clean_name, _normalize, _strip_accents,
     get_channels, parse_xmltv_time, clean_title, clean_desc, duree_str,
@@ -113,9 +115,18 @@ async def maintenant(update: Update, context: ContextTypes.DEFAULT_TYPE):
         nom_saisi = " ".join(context.args)
         cid       = get_ch_id_by_name(nom_saisi)
         if not cid:
+            suggestions = difflib.get_close_matches(
+                nom_saisi.lower().strip(), CH_ALIASES.keys(), n=5, cutoff=0.5
+            )
+            if not suggestions:
+                suggestions = [k for k in CH_ALIASES if k.startswith(nom_saisi.lower().strip()[:2])][:5]
+            hint = (
+                f"\nSuggestions : {', '.join(sanitize_md(s) for s in suggestions)}"
+                if suggestions else "\nEx: tf1, m6, arte, bein1, eurosport, bbc1…"
+            )
             await update.message.reply_text(
-                f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\.\n"
-                "Ex: tf1, m6, arte, bein1, eurosport, bbc1…\nOu: /maintenant sport",
+                f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\." + hint
+                + "\nOu: /maintenant sport",
                 parse_mode="MarkdownV2"
             )
             return
@@ -164,15 +175,23 @@ async def nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def film(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pays = "fr"
+    if context.args and context.args[0].lower() in EPG_SOURCES:
+        pays = context.args[0].lower()
+    flag = EPG_SOURCES[pays]["label"]
     await update.message.reply_text(
-        "🎬 *Films – Quel jour ?*", parse_mode="MarkdownV2",
-        reply_markup=day_keyboard("film")
+        f"🎬 *Films – Quel jour ?* \\({flag}\\)", parse_mode="MarkdownV2",
+        reply_markup=day_keyboard(f"film_{pays}")
     )
 
 async def series(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pays = "fr"
+    if context.args and context.args[0].lower() in EPG_SOURCES:
+        pays = context.args[0].lower()
+    flag = EPG_SOURCES[pays]["label"]
     await update.message.reply_text(
-        "📺 *Séries – Quel jour ?*", parse_mode="MarkdownV2",
-        reply_markup=day_keyboard("series")
+        f"📺 *Séries – Quel jour ?* \\({flag}\\)", parse_mode="MarkdownV2",
+        reply_markup=day_keyboard(f"series_{pays}")
     )
 
 async def sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -357,8 +376,6 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     nom_saisi = " ".join(context.args)
     cid       = get_ch_id_by_name(nom_saisi)
     if not cid:
-        import difflib
-        from config import CH_ALIASES
         suggestions = difflib.get_close_matches(
             nom_saisi.lower().strip(), CH_ALIASES.keys(), n=5, cutoff=0.5
         )
