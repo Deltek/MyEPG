@@ -5,15 +5,15 @@
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict, Counter
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 
 import difflib
 
-from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, EPG_SOURCES, SEARCH_PAGE_SIZE, CH_ALIASES
+from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, EPG_SOURCES, CH_ALIASES
 from utils import (
-    now_paris, get_ch_id_by_name, sanitize_md, clean_name, _normalize, _strip_accents,
-    get_channels, parse_xmltv_time, clean_title, clean_desc, duree_str,
+    now_paris, get_ch_id_by_name, sanitize_md, clean_name,
+    get_channels, parse_xmltv_time, clean_title, duree_str,
     is_film, is_serie, is_sport
 )
 from epg_loader import load_epg, get_epg_channels, get_epg_index
@@ -443,69 +443,6 @@ async def recherche(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔍 *{sanitize_md(mot)}* — Quel pays ?", parse_mode="MarkdownV2",
         reply_markup=country_keyboard("search")
     )
-
-async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0, context=None):
-    """Effectue une recherche EPG et envoie les résultats paginés."""
-    query = update.callback_query
-    try:
-        cache_key = (mot, pays)
-        user_data = context.user_data if context else {}
-        cache     = user_data.setdefault("search_cache", {})
-        if cache_key not in cache:
-            root     = await load_epg(pays)
-            channels = _channels(root, pays)
-            mot_norm = _normalize(_strip_accents(mot))
-            results  = []
-            for prog in root.findall("programme"):
-                cid   = prog.get("channel", "")
-                title = clean_title(prog.findtext("title", default=""))
-                desc  = prog.findtext("desc") or ""
-                if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
-                    continue
-                try:
-                    start = parse_xmltv_time(prog.get("start", ""))
-                    stop  = parse_xmltv_time(prog.get("stop",  ""))
-                except ValueError:
-                    continue
-                results.append({
-                    "start": start, "stop": stop, "title": title,
-                    "desc": clean_desc(desc, title),
-                    "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
-                })
-            results.sort(key=lambda x: x["start"])
-            cache[cache_key] = results
-        results = cache[cache_key]
-        flag         = EPG_SOURCES[pays]["label"]
-        total        = len(results)
-        start_i      = page * SEARCH_PAGE_SIZE
-        page_results = results[start_i:start_i + SEARCH_PAGE_SIZE]
-        if not page_results:
-            await query.message.reply_text(
-                f"🔍 *{sanitize_md(mot)}* — {flag}\n❌ Aucun résultat\\.",
-                parse_mode="MarkdownV2"
-            )
-            return
-        texte = f"🔍 *{sanitize_md(mot)}* — {flag}\n_{total} résultat\\(s\\) — page {page + 1}_\n\n"
-        for r in page_results:
-            h_start = r["start"].astimezone(TZ_PARIS).strftime("%d/%m %H:%M")
-            h_stop  = r["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
-            texte  += f"📺 *{sanitize_md(r['channel'])}*  🕐 {h_start}–{h_stop}\n"
-            texte  += f"▶️ {sanitize_md(r['title'])}\n"
-            if r.get("desc"):
-                texte += f"   📝 {sanitize_md(r['desc'])}\n"
-            texte += "\n"
-        buttons = []
-        if page > 0:
-            buttons.append(InlineKeyboardButton("◀️", callback_data=f"search_page:{pays}:{page-1}"))
-        if start_i + SEARCH_PAGE_SIZE < total:
-            buttons.append(InlineKeyboardButton("▶️", callback_data=f"search_page:{pays}:{page+1}"))
-        markup = InlineKeyboardMarkup([buttons]) if buttons else None
-        if len(texte) > 4000:
-            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
-        await query.message.reply_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
-    except Exception as e:
-        logger.exception("Erreur _do_recherche")
-        await query.message.reply_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
 async def sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
