@@ -79,3 +79,17 @@ def search_programmes(progs, channels: dict, mot: str):
         })
     results.sort(key=lambda x: x["start"])
     return results
+
+
+def paginate(items, page, page_size):
+    """Découpe `items` pour la page demandée.
+
+    Retourne (items_page, total, has_prev, has_next).
+    has_next indique l'existence d'une page suivante non vide.
+    """
+    total      = len(items)
+    start      = page * page_size
+    page_items = items[start:start + page_size]
+    has_prev   = page > 0
+    has_next   = start + page_size < total
+    return page_items, total, has_prev, has_next
