@@ -247,10 +247,10 @@ async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_
     if pays == "all":
         for p in EPG_SOURCES:
             from handlers_public import _do_recherche
-            await _do_recherche(update, mot, p)
+            await _do_recherche(update, mot, p, context=context)
     else:
         from handlers_public import _do_recherche
-        await _do_recherche(update, mot, pays)
+        await _do_recherche(update, mot, pays, context=context)
 
 async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -263,7 +263,7 @@ async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     await query.edit_message_text(f"🔍 Page {page + 1}…")
     from handlers_public import _do_recherche
-    await _do_recherche(update, mot, pays, page)
+    await _do_recherche(update, mot, pays, page, context=context)
 
 async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query

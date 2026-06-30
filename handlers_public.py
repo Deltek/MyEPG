@@ -444,31 +444,37 @@ async def recherche(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=country_keyboard("search")
     )
 
-async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0):
+async def _do_recherche(update: Update, mot: str, pays: str, page: int = 0, context=None):
     """Effectue une recherche EPG et envoie les résultats paginés."""
     query = update.callback_query
     try:
-        root     = await load_epg(pays)
-        channels = _channels(root, pays)
-        mot_norm = _normalize(_strip_accents(mot))
-        results  = []
-        for prog in root.findall("programme"):
-            cid   = prog.get("channel", "")
-            title = clean_title(prog.findtext("title", default=""))
-            desc  = prog.findtext("desc") or ""
-            if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
-                continue
-            try:
-                start = parse_xmltv_time(prog.get("start", ""))
-                stop  = parse_xmltv_time(prog.get("stop",  ""))
-            except ValueError:
-                continue
-            results.append({
-                "start": start, "stop": stop, "title": title,
-                "desc": clean_desc(desc, title),
-                "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
-            })
-        results.sort(key=lambda x: x["start"])
+        cache_key = (mot, pays)
+        user_data = context.user_data if context else {}
+        cache     = user_data.setdefault("search_cache", {})
+        if cache_key not in cache:
+            root     = await load_epg(pays)
+            channels = _channels(root, pays)
+            mot_norm = _normalize(_strip_accents(mot))
+            results  = []
+            for prog in root.findall("programme"):
+                cid   = prog.get("channel", "")
+                title = clean_title(prog.findtext("title", default=""))
+                desc  = prog.findtext("desc") or ""
+                if mot_norm not in _normalize(_strip_accents(title)) and mot_norm not in _normalize(_strip_accents(desc)):
+                    continue
+                try:
+                    start = parse_xmltv_time(prog.get("start", ""))
+                    stop  = parse_xmltv_time(prog.get("stop",  ""))
+                except ValueError:
+                    continue
+                results.append({
+                    "start": start, "stop": stop, "title": title,
+                    "desc": clean_desc(desc, title),
+                    "channel": clean_name(channels.get(cid, cid)), "ch_id": cid,
+                })
+            results.sort(key=lambda x: x["start"])
+            cache[cache_key] = results
+        results = cache[cache_key]
         flag         = EPG_SOURCES[pays]["label"]
         total        = len(results)
         start_i      = page * SEARCH_PAGE_SIZE
