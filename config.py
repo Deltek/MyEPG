@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 BOT_TOKEN     = os.getenv("BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
 BOT_VERSION   = "1.11.0"
+TMDB_API_KEY  = os.getenv("TMDB_API_KEY", "").strip()  # optionnel : enrichissement films (#62)
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN non défini dans l'environnement !")

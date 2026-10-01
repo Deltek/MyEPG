@@ -7,6 +7,9 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Enrichissement des films via l'API TMDB dans `/film` et `/nouveautes` : année, note ⭐ et synopsis (si la description EPG est vide/courte) — optionnel via `TMDB_API_KEY`, cache mémoire, fallback silencieux sur l'EPG (#62)
+
 ---
 
 ## [1.11.0] - 2026-06-30

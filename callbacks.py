@@ -20,6 +20,7 @@ from senders import send_soir_blocs, send_type_blocs
 from keyboards import chaines_rapides_keyboard
 from epg_search import do_recherche
 from logger_utils import logger
+from tmdb import enrich_films
 
 def _channels(root, country: str) -> dict:
     cached = get_epg_channels(country)
@@ -112,6 +113,7 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ch_set            = set(CH_TNT_BY_COUNTRY.get(pays, CH_TNT_FR))
         root              = await load_epg(pays)
         results, jour_label, now_utc = build_type_results(root, day_offset, is_film, min_duration=75, ch_set=ch_set, country=pays)
+        await enrich_films(results)
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"🎬 *Films de la soirée – {flag}*",
@@ -194,6 +196,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             root              = await load_epg("fr")
             results, jour_label, now_utc = build_nouveautes_tnt(root, day_offset)
+            await enrich_films([r for r in results if r.get("film")])
             await send_type_blocs(
                 results, jour_label, now_utc,
                 header="🆕 *Inédits TNT FR*",

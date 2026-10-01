@@ -12,12 +12,12 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/nuit`** — Programmes nuit 00h-06h
 
 ### 🎬 Filtres Spécialisés
-- **`/film [pays]`** — Films de la soirée (FR/GB)
+- **`/film [pays]`** — Films de la soirée (FR/GB), enrichis via TMDB si configuré (synopsis, note ⭐, année)
 - **`/series [pays]`** — Séries de la soirée (FR/GB)
 - **`/sport [pays]`** — Sports du jour (FR/GB)
 - **`/sporttnt`** — Sport du jour sur les chaînes TNT FR
 - **`/live [filtre]`** — Lives en cours (canal, bein, rmc...)
-- **`/nouveautes`** — Programmes inédits
+- **`/nouveautes`** — Programmes inédits (films enrichis via TMDB si configuré)
 
 ### 📊 Résumés & Analyses
 - **`/resume`** — Résumé compact en ce moment
@@ -52,6 +52,7 @@ myepg/
 ├── epg_query.py           # Requêtes EPG (extraction, formatage)
 ├── builders.py            # Construction résultats filtrés
 ├── senders.py             # Formatage & envoi messages Telegram
+├── tmdb.py                # Enrichissement films via TMDB (optionnel)
 ├── keyboards.py           # Claviers Telegram inline
 ├── decorators.py          # Décorateurs (admin_only, etc.)
 ├── state.py               # État global (utilisateurs, temps démarrage)
@@ -133,6 +134,7 @@ python3 main.py
 |----------|------|-------------|
 | `BOT_TOKEN` | string | Token Telegram (obtenu via @BotFather) |
 | `ADMIN_USER_ID` | int | User ID de l'administrateur (pour `/admin` et autres commandes) |
+| `TMDB_API_KEY` | string | *Optionnel* — clé API TMDB gratuite (themoviedb.org) — clé v3 ou, de préférence, « API Read Access Token » v4 (envoyé en header, jamais dans les URL loguées) : ajoute synopsis, note et année aux films de `/film` et `/nouveautes`. Sans clé, aucun appel TMDB n'est fait |
 
 ### Configuration Python (`config.py`)
 
@@ -177,6 +179,13 @@ SEARCH_PAGE_SIZE = 8     # Résultats par page (recherche)
 - Filtre `<new/>` EPG
 - Exclut news, météo, jeux TV récurrents
 - Sport : exclut fillers sport
+
+### Enrichissement TMDB (optionnel)
+- Actif uniquement si `TMDB_API_KEY` est défini (`tmdb.py`)
+- Recherche `/search/movie` (fr-FR, + année EPG si connue), 15 films max par commande, timeout 4 s
+- Cache mémoire par titre normalisé (24 h si trouvé, 6 h si introuvable)
+- Ajoute année et note ⭐ ; le synopsis TMDB remplace la description EPG seulement si elle est vide ou trop courte
+- Toute erreur → fallback silencieux sur la description EPG
 
 ---
 

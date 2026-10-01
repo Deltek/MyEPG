@@ -7,8 +7,14 @@ from collections import defaultdict
 
 from config import TZ_PARIS, CH_TNT_FR
 from utils import sanitize_md, clean_name
+from tmdb import tmdb_tag
 
 _SEP = "━━━━━━━━━━━━━"
+
+def _tmdb_suffix(prog: dict) -> str:
+    """Suffixe MarkdownV2 « (1999) ⭐ 7.4 » si le programme a été enrichi via TMDB."""
+    tag = tmdb_tag(prog)
+    return f"  {sanitize_md(tag)}" if tag else ""
 
 def format_programme(prog: dict) -> str:
     """Formate un programme dict pour affichage Telegram."""
@@ -17,7 +23,7 @@ def format_programme(prog: dict) -> str:
     h_stop   = prog["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
     en_cours = "🔴 " if prog["start"] <= now < prog["stop"] else ""
     new_tag  = " 🆕" if prog.get("new") else ""
-    texte    = f"{en_cours}*{h_start}–{h_stop}*  {sanitize_md(prog['title'])}{new_tag}\n"
+    texte    = f"{en_cours}*{h_start}–{h_stop}*  {sanitize_md(prog['title'])}{_tmdb_suffix(prog)}{new_tag}\n"
     if prog.get("cat"):
         texte += f"   📂 _{sanitize_md(prog['cat'])}_\n"
     if prog.get("desc"):
@@ -98,7 +104,7 @@ async def send_type_blocs(results, jour_label, now_utc, header: str,
             en_cours = "🔴 " if r["start"] <= now_utc < r["stop"] else ""
             ph_tag   = " ⚠️" if r.get("placeholder") else ""
             new_tag  = " 🆕" if r.get("new") else ""
-            bloc_ch += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(r['title'])}{ph_tag}{new_tag}  _{r['duree']}_\n"
+            bloc_ch += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(r['title'])}{_tmdb_suffix(r)}{ph_tag}{new_tag}  _{r['duree']}_\n"
             if r.get("desc") and not r.get("placeholder"):
                 bloc_ch += f"   📝 {sanitize_md(r['desc'])}\n"
         lines.append(bloc_ch)
