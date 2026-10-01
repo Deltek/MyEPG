@@ -10,6 +10,9 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 ### Changed
 - Anti-flood : décorateur `@rate_limit` (fenêtre glissante en mémoire, `RATE_LIMIT_MAX_CALLS`=8 appels / `RATE_LIMIT_PERIOD`=30 s par utilisateur, admin exempté) appliqué aux commandes et callbacks qui chargent l'EPG ; un seul avertissement par fenêtre (#56)
 
+### Fixed
+- `/sport` : les chaînes dont tous les programmes restants sont des placeholders (CANAL+LIVE* notamment) ne sont plus affichées (#60)
+
 ---
 
 ## [1.11.0] - 2026-06-30

@@ -174,6 +174,7 @@ RATE_LIMIT_PERIOD    = 30  # …sur une fenêtre glissante de 30 s (admin exempt
 ### Sports
 - Chaînes sport + filtrage fillers
 - Détecte placeholders EPG
+- Masque les chaînes dont tous les programmes sont des placeholders (ex. CANAL+LIVE*)
 - Exclut les annonces génériques
 
 ### Inédits
