@@ -4,7 +4,7 @@ import json
 import pytest
 
 import state
-from broadcast import broadcast_to
+from broadcast import broadcast_to, command_payload
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +99,17 @@ class TestPersistence:
 
 
 class TestBroadcast:
+    def test_payload_space(self):
+        assert command_payload("/broadcast Coucou à tous") == "Coucou à tous"
+
+    def test_payload_newline_keeps_lines(self):
+        assert command_payload("/broadcast\nLigne 1 du message\nLigne 2") == "Ligne 1 du message\nLigne 2"
+
+    def test_payload_empty(self):
+        assert command_payload("/broadcast") == ""
+        assert command_payload("/broadcast   ") == ""
+        assert command_payload(None) == ""
+
     def test_counts_statuses_and_errors(self):
         async def send(uid):
             if uid == 3:

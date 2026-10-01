@@ -13,7 +13,7 @@ from telegram.ext import ContextTypes, Application
 
 from config import BOT_VERSION, ADMIN_USER_ID, CACHE_TTL, EPG_SOURCES, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY, TZ_PARIS
 from state import BOT_START_TS, get_known_users, get_top_commands, get_total_commands
-from broadcast import broadcast_to
+from broadcast import broadcast_to, command_payload
 from decorators import admin_only
 from logger_utils import logger, get_mem_handler
 from utils import sanitize_md, clean_name, _strip_accents
@@ -447,7 +447,7 @@ async def gc_collect(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @admin_only
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/broadcast <message> — envoie le message (texte brut) à tous les utilisateurs connus."""
-    texte = update.message.text.partition(" ")[2].strip() if update.message.text else ""
+    texte = command_payload(update.message.text)
     if not texte:
         await update.message.reply_text("Usage : /broadcast <message>")
         return
