@@ -51,6 +51,9 @@ async def post_init(app: Application) -> None:
         BotCommand("prochain",    "Prochain programme d'une chaîne"),
         BotCommand("chaines",     "Parcourir toutes les chaînes"),
         BotCommand("recherche",   "Rechercher un programme"),
+        BotCommand("favoris",     "Mes chaînes favorites"),
+        BotCommand("alerte",      "Être prévenu quand un programme démarre"),
+        BotCommand("alertes",     "Mes alertes"),
         BotCommand("aide",        "Afficher l'aide"),
     ]
 

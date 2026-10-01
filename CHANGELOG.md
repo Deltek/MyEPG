@@ -10,6 +10,8 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 ### Added
 - Persistance JSON de l'état (`data/state.json`, écriture atomique, sauvegarde toutes les 60 s et à l'arrêt) : utilisateurs connus, compteur de commandes, données par utilisateur — base des favoris et alertes (#57)
 - `/stats` affiche le top 10 des commandes utilisées (#59)
+- `/favoris` — chaînes favorites persistantes : résumé en cours / suivant / ce soir, `ajouter`, `supprimer`, `liste` (5 max) (#50)
+- `/alerte [pays] <mot>` et `/alertes` — notification proactive quand un programme contenant le mot démarre dans l'heure ; job toutes les 10 min, sans doublon, placeholders ignorés, 10 alertes max (#51)
 - `/broadcast <message>` (admin) — envoie un message à tous les utilisateurs connus, 50 ms entre chaque envoi, bilan envoyés / bloqués / erreurs (#58)
 
 ### Changed

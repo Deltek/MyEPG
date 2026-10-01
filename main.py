@@ -22,6 +22,7 @@ from handlers_public import (
     resume, soir5, doublons, trending, chaine, prochain, chaines, recherche,
     get_id
 )
+from handlers_perso import favoris, alerte, alertes, alert_job, ALERT_CHECK_INTERVAL
 from callbacks import (
     callback_maintenant_country, callback_maintenant_chaine,
     callback_maintenant_all, callback_soir, callback_film,
@@ -69,6 +70,7 @@ def build_app() -> Application:
         .build()
     )
     app.job_queue.run_repeating(_save_state_job, interval=STATE_SAVE_INTERVAL, first=STATE_SAVE_INTERVAL)
+    app.job_queue.run_repeating(alert_job, interval=ALERT_CHECK_INTERVAL, first=60)
 
     # ── Tracking utilisateurs (group=-1 = avant tout) ──
     app.add_handler(TypeHandler(Update, _track_user), group=-1)
@@ -95,6 +97,9 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("prochain",   prochain))
     app.add_handler(CommandHandler("chaines",    chaines))
     app.add_handler(CommandHandler("recherche",  recherche))
+    app.add_handler(CommandHandler("favoris",    favoris))
+    app.add_handler(CommandHandler("alerte",     alerte))
+    app.add_handler(CommandHandler("alertes",    alertes))
     app.add_handler(CommandHandler("id",         get_id))
 
     # ── Commandes admin ────────────────────

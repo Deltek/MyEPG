@@ -19,6 +19,11 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/live [filtre]`** — Lives en cours (canal, bein, rmc...)
 - **`/nouveautes`** — Programmes inédits
 
+### ⭐ Personnalisation
+- **`/favoris`** — Résumé de tes chaînes favorites (en cours, suivant, ce soir) ; `ajouter <chaîne>`, `supprimer <chaîne>`, `liste` (5 max)
+- **`/alerte [pays] <mot>`** — Notification quand un programme contenant ce mot démarre dans l'heure (scan toutes les 10 min) ; `/alerte supprimer <mot>`
+- **`/alertes`** — Liste de tes alertes (10 max)
+
 ### 📊 Résumés & Analyses
 - **`/resume`** — Résumé compact en ce moment
 - **`/soir5`** — Les 5 prochains soirs (vedettes)
@@ -59,6 +64,8 @@ myepg/
 ├── broadcast.py           # Diffusion d'un message à tous les utilisateurs
 ├── handlers_public.py     # Handlers commandes publiques
 ├── handlers_admin.py      # Handlers commandes admin
+├── handlers_perso.py      # Favoris & alertes (+ job de notification)
+├── perso.py               # Logique favoris/alertes (pure, testée)
 ├── callbacks.py           # Gestionnaires de callbacks inline
 ├── main.py                # Point d'entrée du bot
 └── requirements.txt       # Dépendances
