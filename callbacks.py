@@ -20,6 +20,8 @@ from senders import send_soir_blocs, send_type_blocs
 from keyboards import chaines_rapides_keyboard
 from epg_search import do_recherche
 from logger_utils import logger
+from tmdb import enrich_films
+from decorators import rate_limit
 
 def _channels(root, country: str) -> dict:
     cached = get_epg_channels(country)
@@ -43,6 +45,7 @@ async def callback_maintenant_country(update: Update, context: ContextTypes.DEFA
         reply_markup=chaines_rapides_keyboard(country)
     )
 
+@rate_limit
 async def callback_maintenant_chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -51,6 +54,7 @@ async def callback_maintenant_chaine(update: Update, context: ContextTypes.DEFAU
     from handlers_public import _send_maintenant_chaine
     await _send_maintenant_chaine(query.edit_message_text, country, cid)
 
+@rate_limit
 async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query   = update.callback_query
     await query.answer()
@@ -84,6 +88,7 @@ async def callback_maintenant_all(update: Update, context: ContextTypes.DEFAULT_
         logger.exception("Erreur callback_maintenant_all")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
@@ -100,6 +105,7 @@ async def callback_soir(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
@@ -112,6 +118,7 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ch_set            = set(CH_TNT_BY_COUNTRY.get(pays, CH_TNT_FR))
         root              = await load_epg(pays)
         results, jour_label, now_utc = build_type_results(root, day_offset, is_film, min_duration=75, ch_set=ch_set, country=pays)
+        await enrich_films(results)
         await send_type_blocs(
             results, jour_label, now_utc,
             header=f"🎬 *Films de la soirée – {flag}*",
@@ -121,6 +128,7 @@ async def callback_film(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
@@ -142,6 +150,7 @@ async def callback_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
@@ -174,6 +183,7 @@ async def callback_nouveautes_day(update: Update, context: ContextTypes.DEFAULT_
         reply_markup=nouveautes_type_keyboard(day_offset)
     )
 
+@rate_limit
 async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()
@@ -194,6 +204,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             root              = await load_epg("fr")
             results, jour_label, now_utc = build_nouveautes_tnt(root, day_offset)
+            await enrich_films([r for r in results if r.get("film")])
             await send_type_blocs(
                 results, jour_label, now_utc,
                 header="🆕 *Inédits TNT FR*",
@@ -203,6 +214,7 @@ async def callback_nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     query = update.callback_query
@@ -237,6 +249,7 @@ async def callback_list_chaines(update: Update, context: ContextTypes.DEFAULT_TY
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -252,6 +265,7 @@ async def callback_search_country(update: Update, context: ContextTypes.DEFAULT_
     else:
         await do_recherche(update, mot, pays, context=context)
 
+@rate_limit
 async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -264,6 +278,7 @@ async def callback_search_page(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.edit_message_text(f"🔍 Page {page + 1}…")
     await do_recherche(update, mot, pays, page, context=context)
 
+@rate_limit
 async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -284,6 +299,7 @@ async def callback_prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -301,6 +317,7 @@ async def callback_nuit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def callback_sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query      = update.callback_query
     await query.answer()

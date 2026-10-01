@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Données persistées du bot (état JSON)
+data/
+
+# Worktrees des agents Claude Code
+.claude/worktrees/

@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY
 from utils import (
     parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories,
-    duree_str, is_sport_filler, is_epg_placeholder, is_nouveautes_filler, clean_name, now_paris
+    duree_str, get_year, is_film, is_sport_filler, is_epg_placeholder, is_nouveautes_filler, clean_name, now_paris
 )
 
 def _get_channels(root, country: str) -> dict:
@@ -103,10 +103,15 @@ def build_type_results(root, day_offset: int, filter_fn, min_duration: int = 0, 
                 "channel": clean_name(channels.get(cid, cid)),
                 "ch_id": cid,
                 "cats": get_categories(prog), "duree": duree_str(start, stop),
-                "new": prog.find("new") is not None,
+                "new": prog.find("new") is not None, "year": get_year(prog),
             })
 
     return results, jour_label, now_utc
+
+def drop_placeholder_only_channels(results: list) -> list:
+    """Exclut les chaînes dont tous les programmes sont des placeholders (#60)."""
+    useful = {r["ch_id"] for r in results if not r.get("placeholder")}
+    return [r for r in results if r["ch_id"] in useful]
 
 def build_sport_results(root, day_offset: int, ch_list: list = None, country: str = "fr"):
     """Construit les résultats sport avec détection fillers."""
@@ -147,7 +152,7 @@ def build_sport_results(root, day_offset: int, ch_list: list = None, country: st
                 "placeholder": is_epg_placeholder(title, desc),
             })
 
-    return results, jour_label, now_utc
+    return drop_placeholder_only_channels(results), jour_label, now_utc
 
 def build_maintenant_sport(root, filtre: str = None, country: str = "fr") -> list:
     """Construit les résultats sport/live en cours (optionnellement filtré)."""
@@ -209,6 +214,7 @@ def build_nouveautes_tnt(root, day_offset: int, country: str = "fr"):
             "channel": clean_name(channels.get(cid, cid)),
             "ch_id": cid, "cats": get_categories(prog),
             "duree": duree_str(start, stop), "new": True, "placeholder": False,
+            "year": get_year(prog), "film": is_film(prog),
         })
     return results, jour_label, now_utc
 
