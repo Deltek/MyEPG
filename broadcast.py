@@ -8,6 +8,11 @@ from collections import Counter
 # Telegram : ~30 msg/s max vers des chats distincts
 BROADCAST_DELAY = 0.05
 
+def command_payload(text: str) -> str:
+    """'/broadcast\nLigne 1\nLigne 2' → 'Ligne 1\nLigne 2' (sauts de ligne internes conservés)."""
+    parts = (text or "").split(maxsplit=1)
+    return parts[1].strip() if len(parts) > 1 else ""
+
 async def broadcast_to(user_ids, send_fn, delay: float = BROADCAST_DELAY) -> Counter:
     """Appelle send_fn(user_id) pour chaque utilisateur, espacé de `delay`.
 
