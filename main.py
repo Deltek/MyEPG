@@ -14,7 +14,7 @@ from logger_utils import get_logger
 from handlers_admin import (
     post_init, admin_panel, status, ping, version, refresh,
     resetcache, cache_info, stats, testepg, top_chaines, sante,
-    logs, memoire, prochainexpire, nbusers, gc_collect
+    logs, memoire, prochainexpire, nbusers, gc_collect, broadcast
 )
 from handlers_public import (
     start, aide, maintenant, soir, prime, demain, nuit,
@@ -22,6 +22,7 @@ from handlers_public import (
     resume, soir5, doublons, trending, chaine, prochain, chaines, recherche,
     get_id
 )
+from handlers_perso import favoris, alerte, alertes, alert_job, ALERT_CHECK_INTERVAL
 from callbacks import (
     callback_maintenant_country, callback_maintenant_chaine,
     callback_maintenant_all, callback_soir, callback_film,
@@ -30,7 +31,7 @@ from callbacks import (
     callback_search_country, callback_search_page,
     callback_prime, callback_nuit, callback_admin_logs
 )
-from state import add_user
+from state import add_user, normalize_command, track_command, load_state, save_state
 
 logger = get_logger()
 
@@ -38,21 +39,38 @@ logger = get_logger()
 # HANDLERS GLOBAUX
 # ──────────────────────────────────────────
 async def _track_user(update: Update, context):
-    """Enregistre chaque utilisateur (group=-1 : avant tout)."""
+    """Enregistre chaque utilisateur et compte les commandes (group=-1 : avant tout)."""
     if update.effective_user:
         add_user(update.effective_user.id)
+    if update.message:
+        cmd = normalize_command(update.message.text)
+        if cmd:
+            track_command(cmd)
+
+async def _save_state_job(context):
+    """Job périodique : persiste l'état s'il a changé."""
+    save_state()
+
+async def _post_shutdown(app: Application) -> None:
+    save_state()
+
+STATE_SAVE_INTERVAL = 60
 
 # ──────────────────────────────────────────
 # MAIN
 # ──────────────────────────────────────────
-def main():
-    """Initialise et démarre le bot."""
+def build_app() -> Application:
+    """Construit l'application et enregistre tous les handlers et jobs."""
+    load_state()
     app = (
         Application.builder()
         .token(BOT_TOKEN)
         .post_init(post_init)
+        .post_shutdown(_post_shutdown)
         .build()
     )
+    app.job_queue.run_repeating(_save_state_job, interval=STATE_SAVE_INTERVAL, first=STATE_SAVE_INTERVAL)
+    app.job_queue.run_repeating(alert_job, interval=ALERT_CHECK_INTERVAL, first=60)
 
     # ── Tracking utilisateurs (group=-1 = avant tout) ──
     app.add_handler(TypeHandler(Update, _track_user), group=-1)
@@ -79,6 +97,9 @@ def main():
     app.add_handler(CommandHandler("prochain",   prochain))
     app.add_handler(CommandHandler("chaines",    chaines))
     app.add_handler(CommandHandler("recherche",  recherche))
+    app.add_handler(CommandHandler("favoris",    favoris))
+    app.add_handler(CommandHandler("alerte",     alerte))
+    app.add_handler(CommandHandler("alertes",    alertes))
     app.add_handler(CommandHandler("id",         get_id))
 
     # ── Commandes admin ────────────────────
@@ -98,6 +119,7 @@ def main():
     app.add_handler(CommandHandler("prochainexpire", prochainexpire))
     app.add_handler(CommandHandler("nbusers",    nbusers))
     app.add_handler(CommandHandler("gc",         gc_collect))
+    app.add_handler(CommandHandler("broadcast",  broadcast))
 
     # ── Callbacks ─────────────────────────
     app.add_handler(CallbackQueryHandler(callback_maintenant_country, pattern=r"^now:[a-z]+$"))
@@ -117,6 +139,11 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_search_page,        pattern=r"^search_page:"))
     app.add_handler(CallbackQueryHandler(callback_admin_logs,         pattern=r"^admin_logs:"))
 
+    return app
+
+def main():
+    """Initialise et démarre le bot."""
+    app = build_app()
     logger.info("Bot Programme TV démarré.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

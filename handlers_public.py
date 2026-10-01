@@ -42,6 +42,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/film  /series  /sport `[pays]`  /sporttnt  /nouveautes\n\n"
         "🔍 *Recherche*\n"
         "/recherche `<mot>`  /chaine `<nom>`  /prochain `<nom>`  /chaines\n\n"
+        "⭐ *Perso*\n"
+        "/favoris  /alerte `<mot>`  /alertes\n\n"
         "📈 *Tendances*\n"
         "/trending  /doublons\n\n"
         "🌍 Pays : `fr` 🇫🇷  \\|  `gb` 🇬🇧\n"
