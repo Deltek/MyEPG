@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from config import TZ_PARIS, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY
 from utils import (
     parse_xmltv_time, get_channels, clean_title, clean_desc, get_categories,
-    duree_str, is_sport_filler, is_epg_placeholder, is_nouveautes_filler, clean_name, now_paris
+    duree_str, get_year, is_film, is_sport_filler, is_epg_placeholder, is_nouveautes_filler, clean_name, now_paris
 )
 
 def _get_channels(root, country: str) -> dict:
@@ -70,11 +70,16 @@ def build_soir_results(root, day_offset: int, country: str = "fr"):
 
     return results, channels, jour_label, now_utc
 
-def build_type_results(root, day_offset: int, filter_fn, min_duration: int = 0, ch_set: set = None, country: str = "fr"):
-    """Construit les résultats avec filtre personnalisé (films, séries, etc.)."""
+def day_window(day_offset: int):
+    """Fenêtre journée complète Europe/Paris (00h → 00h J+1, DST géré) : (start_utc, end_utc, jour_label)."""
+    return _time_window(day_offset, 0, 0)
+
+def build_type_results(root, day_offset: int, filter_fn, min_duration: int = 0, ch_set: set = None, country: str = "fr",
+                       hour_start: int = 19, hour_end: int = 0):
+    """Construit les résultats avec filtre personnalisé (films, séries, etc.). Fenêtre 19h-00h par défaut."""
     channels                       = _get_channels(root, country)
     now_utc                        = datetime.now(tz=timezone.utc)
-    start_utc, end_utc, jour_label = _time_window(day_offset, 19, 0)
+    start_utc, end_utc, jour_label = _time_window(day_offset, hour_start, hour_end)
     search_set                     = ch_set if ch_set is not None else set(CH_TNT_FR)
     results                        = []
 
@@ -103,9 +108,33 @@ def build_type_results(root, day_offset: int, filter_fn, min_duration: int = 0, 
                 "channel": clean_name(channels.get(cid, cid)),
                 "ch_id": cid,
                 "cats": get_categories(prog), "duree": duree_str(start, stop),
-                "new": prog.find("new") is not None,
+                "new": prog.find("new") is not None, "year": get_year(prog),
             })
 
+    return results, jour_label, now_utc
+
+def drop_placeholder_only_channels(results: list) -> list:
+    """Exclut les chaînes dont tous les programmes sont des placeholders (#60)."""
+    useful = {r["ch_id"] for r in results if not r.get("placeholder")}
+    return [r for r in results if r["ch_id"] in useful]
+
+# ──────────────────────────────────────────
+# /semaine — journée d'une chaîne
+# ──────────────────────────────────────────
+CALLBACK_DATA_MAX = 64  # limite Telegram (octets)
+
+def semaine_callback_prefix(country: str, cid: str) -> str | None:
+    """Préfixe callback `sem:<pays>:<cid>` pour day_keyboard ; None si `…:<jour>` dépasserait 64 octets."""
+    prefix = f"sem:{country}:{cid}"
+    return prefix if len(f"{prefix}:6".encode("utf-8")) <= CALLBACK_DATA_MAX else None
+
+def build_channel_day(root, cid: str, day_offset: int, country: str = "fr", now_utc=None):
+    """Programmes d'une chaîne pour une journée Paris complète (programmes terminés exclus)."""
+    from analytics import filter_day_programmes
+    if now_utc is None:
+        now_utc = datetime.now(tz=timezone.utc)
+    start_utc, end_utc, jour_label = day_window(day_offset)
+    results = filter_day_programmes(iter_progs(root, {cid}, country), start_utc, end_utc, now_utc)
     return results, jour_label, now_utc
 
 def build_sport_results(root, day_offset: int, ch_list: list = None, country: str = "fr"):
@@ -147,7 +176,7 @@ def build_sport_results(root, day_offset: int, ch_list: list = None, country: st
                 "placeholder": is_epg_placeholder(title, desc),
             })
 
-    return results, jour_label, now_utc
+    return drop_placeholder_only_channels(results), jour_label, now_utc
 
 def build_maintenant_sport(root, filtre: str = None, country: str = "fr") -> list:
     """Construit les résultats sport/live en cours (optionnellement filtré)."""
@@ -209,6 +238,7 @@ def build_nouveautes_tnt(root, day_offset: int, country: str = "fr"):
             "channel": clean_name(channels.get(cid, cid)),
             "ch_id": cid, "cats": get_categories(prog),
             "duree": duree_str(start, stop), "new": True, "placeholder": False,
+            "year": get_year(prog), "film": is_film(prog),
         })
     return results, jour_label, now_utc
 

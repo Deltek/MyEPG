@@ -80,6 +80,11 @@ def get_categories(prog_elem) -> str:
     cats = [c.text for c in prog_elem.findall("category") if c.text]
     return " · ".join(cats) if cats else ""
 
+def get_year(prog_elem) -> int | None:
+    """Extrait l'année (4 chiffres) de la balise XMLTV <date>, si présente."""
+    m = re.match(r"\s*(\d{4})", prog_elem.findtext("date", default="") or "")
+    return int(m.group(1)) if m else None
+
 def duree_str(start: datetime, stop: datetime) -> str:
     """Formate la durée entre deux datetimes."""
     mins = max(0, int((stop - start).total_seconds() // 60))

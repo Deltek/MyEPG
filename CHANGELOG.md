@@ -7,6 +7,25 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Persistance JSON de l'état (`data/state.json`, écriture atomique, sauvegarde toutes les 60 s et à l'arrêt) : utilisateurs connus, compteur de commandes, données par utilisateur — base des favoris et alertes (#57)
+- `/stats` affiche le top 10 des commandes utilisées (#59)
+- `/favoris` — chaînes favorites persistantes : résumé en cours / suivant / ce soir, `ajouter`, `supprimer`, `liste` (5 max) (#50)
+- `/alerte [pays] <mot>` et `/alertes` — notification proactive quand un programme contenant le mot démarre dans l'heure ; job toutes les 10 min, sans doublon, placeholders ignorés, 10 alertes max (#51)
+- `/broadcast <message>` (admin) — envoie un message à tous les utilisateurs connus, 50 ms entre chaque envoi, bilan envoyés / bloqués / erreurs (#58)
+- Enrichissement des films via l'API TMDB dans `/film` et `/nouveautes` : année, note ⭐ et synopsis (si la description EPG est vide/courte) — optionnel via `TMDB_API_KEY`, cache mémoire, fallback silencieux sur l'EPG (#62)
+- `/categorie <type> [pays]` — programmes TNT d'une catégorie EPG (documentaire, jeunesse, animation…) sur la journée choisie, correspondance partielle insensible aux accents et suggestions fuzzy si inconnue ; `/categorie` seul liste les catégories de l'EPG du jour (#53)
+- `/semaine <chaine>` — clavier 7 jours puis programme complet de la chaîne pour le jour choisi (journée Europe/Paris, clavier conservé pour changer de jour) (#55)
+
+### Changed
+- `main.build_app()` extrait de `main()` (smoke test possible sans polling)
+- `requirements.txt` : `python-telegram-bot[job-queue]` (JobQueue), `httpx` déclaré explicitement, `requests` retiré
+- Anti-flood : décorateur `@rate_limit` (fenêtre glissante en mémoire, `RATE_LIMIT_MAX_CALLS`=8 appels / `RATE_LIMIT_PERIOD`=30 s par utilisateur, admin exempté) appliqué aux commandes et callbacks qui chargent l'EPG ; un seul avertissement par fenêtre (#56)
+
+### Fixed
+- `/testepg` : utilisait `requests` sans l'importer (NameError) — passe en `httpx` async
+- `/sport` : les chaînes dont tous les programmes restants sont des placeholders (CANAL+LIVE* notamment) ne sont plus affichées (#60)
+
 ---
 
 ## [1.11.0] - 2026-06-30
