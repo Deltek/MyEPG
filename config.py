@@ -18,6 +18,10 @@ PAGE_SIZE        = 20
 SEARCH_PAGE_SIZE = 8
 TZ_PARIS         = ZoneInfo("Europe/Paris")
 
+# Anti-flood (#56) : max appels coûteux par utilisateur sur une fenêtre glissante
+RATE_LIMIT_MAX_CALLS = 8
+RATE_LIMIT_PERIOD    = 30  # secondes
+
 try:
     locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
 except locale.Error:

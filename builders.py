@@ -108,6 +108,11 @@ def build_type_results(root, day_offset: int, filter_fn, min_duration: int = 0, 
 
     return results, jour_label, now_utc
 
+def drop_placeholder_only_channels(results: list) -> list:
+    """Exclut les chaînes dont tous les programmes sont des placeholders (#60)."""
+    useful = {r["ch_id"] for r in results if not r.get("placeholder")}
+    return [r for r in results if r["ch_id"] in useful]
+
 def build_sport_results(root, day_offset: int, ch_list: list = None, country: str = "fr"):
     """Construit les résultats sport avec détection fillers."""
     if ch_list is None:
@@ -147,7 +152,7 @@ def build_sport_results(root, day_offset: int, ch_list: list = None, country: st
                 "placeholder": is_epg_placeholder(title, desc),
             })
 
-    return results, jour_label, now_utc
+    return drop_placeholder_only_channels(results), jour_label, now_utc
 
 def build_maintenant_sport(root, filtre: str = None, country: str = "fr") -> list:
     """Construit les résultats sport/live en cours (optionnellement filtré)."""
