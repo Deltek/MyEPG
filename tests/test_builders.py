@@ -421,3 +421,67 @@ class TestBuildMaintenant:
             results = build_maintenant_sport(root)
         if results:
             assert "duree_reste" in results[0]
+
+
+class TestDropPlaceholderOnlyChannels:
+    def test_channel_all_placeholder_excluded(self):
+        from builders import drop_placeholder_only_channels
+        results = [
+            {"ch_id": "CANAL+LIVE1.fr", "title": "Football",    "placeholder": True},
+            {"ch_id": "CANAL+LIVE1.fr", "title": "Rugby",       "placeholder": True},
+            {"ch_id": "EUROSPORT1.fr",  "title": "Tennis open", "placeholder": False},
+        ]
+        kept = drop_placeholder_only_channels(results)
+        assert [r["ch_id"] for r in kept] == ["EUROSPORT1.fr"]
+
+    def test_mixed_channel_kept_entirely(self):
+        from builders import drop_placeholder_only_channels
+        results = [
+            {"ch_id": "CANAL+LIVE2.fr", "title": "Football",         "placeholder": True},
+            {"ch_id": "CANAL+LIVE2.fr", "title": "Ligue 1 : PSG-OM", "placeholder": False},
+        ]
+        assert drop_placeholder_only_channels(results) == results
+
+    def test_empty_list(self):
+        from builders import drop_placeholder_only_channels
+        assert drop_placeholder_only_channels([]) == []
+
+    def test_order_preserved(self):
+        from builders import drop_placeholder_only_channels
+        results = [
+            {"ch_id": "B", "placeholder": False},
+            {"ch_id": "A", "placeholder": True},
+            {"ch_id": "B", "placeholder": True},
+        ]
+        assert drop_placeholder_only_channels(results) == [results[0], results[2]]
+
+
+PLACEHOLDER_XML = """<tv>
+  <channel id="EUROSPORT1.fr"><display-name>Eurosport 1</display-name></channel>
+  <channel id="CANAL+LIVE1.fr"><display-name>CANAL+ LIVE 1</display-name></channel>
+  <programme start="20240101183000 +0000" stop="20240101210000 +0000" channel="EUROSPORT1.fr">
+    <title>Tennis open</title>
+  </programme>
+  <programme start="20240101183000 +0000" stop="20240101200000 +0000" channel="CANAL+LIVE1.fr">
+    <title>Football</title>
+  </programme>
+  <programme start="20240101200000 +0000" stop="20240101220000 +0000" channel="CANAL+LIVE1.fr">
+    <title>Match</title>
+    <desc>Suivez un match d'une compétition de rugby.</desc>
+  </programme>
+</tv>"""
+
+
+class TestBuildSportResultsPlaceholderChannels:
+    def test_placeholder_only_channel_dropped(self):
+        from builders import build_sport_results
+        root = ET.fromstring(PLACEHOLDER_XML)
+        with patch("builders.now_paris", return_value=FIXED_NOW), \
+             patch("builders.datetime") as mock_dt:
+            mock_dt.now.return_value = FIXED_UTC_NOW
+            results, _, _ = build_sport_results(
+                root, 0, ch_list=["EUROSPORT1.fr", "CANAL+LIVE1.fr"]
+            )
+        ch_ids = {r["ch_id"] for r in results}
+        assert "EUROSPORT1.fr" in ch_ids
+        assert "CANAL+LIVE1.fr" not in ch_ids

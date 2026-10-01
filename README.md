@@ -19,6 +19,11 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/live [filtre]`** — Lives en cours (canal, bein, rmc...)
 - **`/nouveautes`** — Programmes inédits (films enrichis via TMDB si configuré)
 
+### ⭐ Personnalisation
+- **`/favoris`** — Résumé de tes chaînes favorites (en cours, suivant, ce soir) ; `ajouter <chaîne>`, `supprimer <chaîne>`, `liste` (5 max)
+- **`/alerte [pays] <mot>`** — Notification quand un programme contenant ce mot démarre dans l'heure (scan toutes les 10 min) ; `/alerte supprimer <mot>`
+- **`/alertes`** — Liste de tes alertes (10 max)
+
 ### 📊 Résumés & Analyses
 - **`/resume`** — Résumé compact en ce moment
 - **`/soir5`** — Les 5 prochains soirs (vedettes)
@@ -34,7 +39,8 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/cache`** — État du cache EPG
 - **`/refresh [pays]`** — Forcer rechargement
 - **`/logs`** — Dernières erreurs
-- **`/stats`** — Statistiques EPG
+- **`/stats`** — Statistiques EPG + top des commandes utilisées
+- **`/broadcast <message>`** — Envoyer un message à tous les utilisateurs connus
 - Et 10+ autres commandes...
 
 ---
@@ -54,10 +60,14 @@ myepg/
 ├── senders.py             # Formatage & envoi messages Telegram
 ├── tmdb.py                # Enrichissement films via TMDB (optionnel)
 ├── keyboards.py           # Claviers Telegram inline
-├── decorators.py          # Décorateurs (admin_only, etc.)
-├── state.py               # État global (utilisateurs, temps démarrage)
+├── decorators.py          # Décorateurs (admin_only, rate_limit)
+├── rate_limiter.py        # Fenêtre glissante anti-flood (sans Telegram)
+├── state.py               # État global persisté en JSON (utilisateurs, compteurs, données par user)
+├── broadcast.py           # Diffusion d'un message à tous les utilisateurs
 ├── handlers_public.py     # Handlers commandes publiques
 ├── handlers_admin.py      # Handlers commandes admin
+├── handlers_perso.py      # Favoris & alertes (+ job de notification)
+├── perso.py               # Logique favoris/alertes (pure, testée)
 ├── callbacks.py           # Gestionnaires de callbacks inline
 ├── main.py                # Point d'entrée du bot
 └── requirements.txt       # Dépendances
@@ -135,6 +145,7 @@ python3 main.py
 | `BOT_TOKEN` | string | Token Telegram (obtenu via @BotFather) |
 | `ADMIN_USER_ID` | int | User ID de l'administrateur (pour `/admin` et autres commandes) |
 | `TMDB_API_KEY` | string | *Optionnel* — clé API TMDB gratuite (themoviedb.org) — clé v3 ou, de préférence, « API Read Access Token » v4 (envoyé en header, jamais dans les URL loguées) : ajoute synopsis, note et année aux films de `/film` et `/nouveautes`. Sans clé, aucun appel TMDB n'est fait |
+| `MYEPG_DATA_DIR` | string | *(optionnel)* Dossier des données persistées — défaut : `data/` à côté du code |
 
 ### Configuration Python (`config.py`)
 
@@ -142,6 +153,8 @@ python3 main.py
 CACHE_TTL        = 3600  # Cache EPG expire après 1h
 PAGE_SIZE        = 20    # Résultats par page (listes chaînes)
 SEARCH_PAGE_SIZE = 8     # Résultats par page (recherche)
+RATE_LIMIT_MAX_CALLS = 8   # Anti-flood : appels coûteux max par utilisateur…
+RATE_LIMIT_PERIOD    = 30  # …sur une fenêtre glissante de 30 s (admin exempté)
 ```
 
 ---
@@ -173,6 +186,7 @@ SEARCH_PAGE_SIZE = 8     # Résultats par page (recherche)
 ### Sports
 - Chaînes sport + filtrage fillers
 - Détecte placeholders EPG
+- Masque les chaînes dont tous les programmes sont des placeholders (ex. CANAL+LIVE*)
 - Exclut les annonces génériques
 
 ### Inédits

@@ -12,7 +12,8 @@ from telegram import Update, BotCommand, BotCommandScopeChat, InlineKeyboardButt
 from telegram.ext import ContextTypes, Application
 
 from config import BOT_VERSION, ADMIN_USER_ID, CACHE_TTL, EPG_SOURCES, CH_TNT_FR, CH_SPORT_FR, CH_TNT_BY_COUNTRY, CH_SPORT_BY_COUNTRY, TZ_PARIS
-from state import BOT_START_TS, get_known_users
+from state import BOT_START_TS, get_known_users, get_top_commands, get_total_commands
+from broadcast import broadcast_to
 from decorators import admin_only
 from logger_utils import logger, get_mem_handler
 from utils import sanitize_md, clean_name, _strip_accents
@@ -22,6 +23,8 @@ from admin_stats import (
     seconds_until_expire, top_channels, epg_quality, pct, bar,
 )
 import xml.etree.ElementTree as ET
+import httpx
+from telegram.error import Forbidden
 
 # ──────────────────────────────────────────
 # POST_INIT — Enregistrement des commandes
@@ -48,6 +51,9 @@ async def post_init(app: Application) -> None:
         BotCommand("prochain",    "Prochain programme d'une chaîne"),
         BotCommand("chaines",     "Parcourir toutes les chaînes"),
         BotCommand("recherche",   "Rechercher un programme"),
+        BotCommand("favoris",     "Mes chaînes favorites"),
+        BotCommand("alerte",      "Être prévenu quand un programme démarre"),
+        BotCommand("alertes",     "Mes alertes"),
         BotCommand("aide",        "Afficher l'aide"),
     ]
 
@@ -73,6 +79,7 @@ async def post_init(app: Application) -> None:
             BotCommand("prochainexpire",    "Expiration caches ⏳"),
             BotCommand("nbusers",           "Utilisateurs 👥"),
             BotCommand("gc",               "GC Python 🧹"),
+            BotCommand("broadcast",        "Message à tous les users 📣"),
             BotCommand("id",               "User ID 🆔"),
         ], scope=BotCommandScopeChat(chat_id=ADMIN_USER_ID))
 
@@ -97,7 +104,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /resetcache • /cache • /stats • /testepg `[pays]`\n"
         "• /top `[pays]` • /sante `[pays]`\n"
         "• /logs • /memoire • /prochainexpire • /nbusers\n"
-        "• /gc • /id",
+        "• /gc • /id • /broadcast `<message>`",
         parse_mode="MarkdownV2"
     )
 
@@ -234,6 +241,12 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"  🕐 Chargé à {loaded_at.strftime('%H:%M:%S')} "
             f"_\\(il y a {age_min}min, expire dans {expire}min\\)_"
         )
+    top_cmds = get_top_commands(10)
+    if top_cmds:
+        cmd_lines = [f"⌨️ *Top commandes* — {get_total_commands()} au total"]
+        for i, (cmd, nb) in enumerate(top_cmds, 1):
+            cmd_lines.append(f"  {i}\\. /{sanitize_md(cmd)} — {nb}")
+        lignes.append("\n".join(cmd_lines))
     await update.message.reply_text("\n\n".join(lignes), parse_mode="MarkdownV2")
 
 @admin_only
@@ -251,14 +264,16 @@ async def testepg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         flag = EPG_SOURCES[country]["label"]
         url  = EPG_SOURCES[country]["url"]
         try:
-            t0    = time.time()
-            r     = requests.get(url, timeout=15, stream=True)
-            r.raise_for_status()
-            chunk = next(r.iter_content(chunk_size=4096), b"")
-            ms    = int((time.time() - t0) * 1000)
-            r.close()
+            t0 = time.time()
+            async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+                async with client.stream("GET", url) as r:
+                    r.raise_for_status()
+                    chunk = b""
+                    async for chunk in r.aiter_bytes(chunk_size=4096):
+                        break
+            ms = int((time.time() - t0) * 1000)
             lignes.append(f"{flag} ✅  ⏱ {ms}ms  📥 {len(chunk)} B")
-        except requests.Timeout:
+        except httpx.TimeoutException:
             lignes.append(f"{flag} ❌ Timeout \\(\\>15s\\)")
         except Exception as e:
             lignes.append(f"{flag} ❌ `{str(e)[:100]}`")
@@ -389,7 +404,7 @@ async def nbusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_admin = ADMIN_USER_ID in get_known_users()
     await update.message.reply_text(
         f"👥 *Utilisateurs distincts*\n\n"
-        f"  Depuis le démarrage : *{total}*\n"
+        f"  Total \\(persisté\\) : *{total}*\n"
         f"  ⏱ Uptime : `{fmt_uptime(time.time() - BOT_START_TS)}`\n"
         f"  🔧 Admin compté : {'✅' if is_admin else '❌'}\n"
         f"  _{total - (1 if is_admin else 0)} utilisateur\\(s\\) hors admin_",
@@ -426,3 +441,29 @@ async def gc_collect(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         await msg.edit_text(f"❌ Erreur : {e}")
+
+@admin_only
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/broadcast <message> — envoie le message (texte brut) à tous les utilisateurs connus."""
+    texte = update.message.text.partition(" ")[2].strip() if update.message.text else ""
+    if not texte:
+        await update.message.reply_text("Usage : /broadcast <message>")
+        return
+    users = sorted(get_known_users())
+    msg   = await update.message.reply_text(f"📣 Envoi à {len(users)} utilisateur(s)…")
+
+    async def _send(uid: int) -> str:
+        try:
+            await context.bot.send_message(chat_id=uid, text=texte)
+            return "ok"
+        except Forbidden:
+            return "blocked"
+
+    res = await broadcast_to(users, _send)
+    logger.info(f"Broadcast : {dict(res)}")
+    await msg.edit_text(
+        f"📣 Broadcast terminé\n"
+        f"  ✅ Envoyés : {res['ok']}\n"
+        f"  🚫 Bloqué/désinscrit : {res['blocked']}\n"
+        f"  ❌ Erreurs : {res['error']}"
+    )
