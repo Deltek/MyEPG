@@ -7,6 +7,18 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Persistance JSON de l'état (`data/state.json`, écriture atomique, sauvegarde toutes les 60 s et à l'arrêt) : utilisateurs connus, compteur de commandes, données par utilisateur — base des favoris et alertes (#57)
+- `/stats` affiche le top 10 des commandes utilisées (#59)
+- `/broadcast <message>` (admin) — envoie un message à tous les utilisateurs connus, 50 ms entre chaque envoi, bilan envoyés / bloqués / erreurs (#58)
+
+### Changed
+- `main.build_app()` extrait de `main()` (smoke test possible sans polling)
+- `requirements.txt` : `python-telegram-bot[job-queue]` (JobQueue), `httpx` déclaré explicitement, `requests` retiré
+
+### Fixed
+- `/testepg` : utilisait `requests` sans l'importer (NameError) — passe en `httpx` async
+
 ---
 
 ## [1.11.0] - 2026-06-30
