@@ -34,7 +34,8 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/cache`** — État du cache EPG
 - **`/refresh [pays]`** — Forcer rechargement
 - **`/logs`** — Dernières erreurs
-- **`/stats`** — Statistiques EPG
+- **`/stats`** — Statistiques EPG + top des commandes utilisées
+- **`/broadcast <message>`** — Envoyer un message à tous les utilisateurs connus
 - Et 10+ autres commandes...
 
 ---
@@ -54,7 +55,8 @@ myepg/
 ├── senders.py             # Formatage & envoi messages Telegram
 ├── keyboards.py           # Claviers Telegram inline
 ├── decorators.py          # Décorateurs (admin_only, etc.)
-├── state.py               # État global (utilisateurs, temps démarrage)
+├── state.py               # État global persisté en JSON (utilisateurs, compteurs, données par user)
+├── broadcast.py           # Diffusion d'un message à tous les utilisateurs
 ├── handlers_public.py     # Handlers commandes publiques
 ├── handlers_admin.py      # Handlers commandes admin
 ├── callbacks.py           # Gestionnaires de callbacks inline
@@ -133,6 +135,7 @@ python3 main.py
 |----------|------|-------------|
 | `BOT_TOKEN` | string | Token Telegram (obtenu via @BotFather) |
 | `ADMIN_USER_ID` | int | User ID de l'administrateur (pour `/admin` et autres commandes) |
+| `MYEPG_DATA_DIR` | string | *(optionnel)* Dossier des données persistées — défaut : `data/` à côté du code |
 
 ### Configuration Python (`config.py`)
 
