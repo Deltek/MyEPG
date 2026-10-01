@@ -53,7 +53,8 @@ myepg/
 ├── builders.py            # Construction résultats filtrés
 ├── senders.py             # Formatage & envoi messages Telegram
 ├── keyboards.py           # Claviers Telegram inline
-├── decorators.py          # Décorateurs (admin_only, etc.)
+├── decorators.py          # Décorateurs (admin_only, rate_limit)
+├── rate_limiter.py        # Fenêtre glissante anti-flood (sans Telegram)
 ├── state.py               # État global (utilisateurs, temps démarrage)
 ├── handlers_public.py     # Handlers commandes publiques
 ├── handlers_admin.py      # Handlers commandes admin
@@ -140,6 +141,8 @@ python3 main.py
 CACHE_TTL        = 3600  # Cache EPG expire après 1h
 PAGE_SIZE        = 20    # Résultats par page (listes chaînes)
 SEARCH_PAGE_SIZE = 8     # Résultats par page (recherche)
+RATE_LIMIT_MAX_CALLS = 8   # Anti-flood : appels coûteux max par utilisateur…
+RATE_LIMIT_PERIOD    = 30  # …sur une fenêtre glissante de 30 s (admin exempté)
 ```
 
 ---

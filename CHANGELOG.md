@@ -7,6 +7,9 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Anti-flood : décorateur `@rate_limit` (fenêtre glissante en mémoire, `RATE_LIMIT_MAX_CALLS`=8 appels / `RATE_LIMIT_PERIOD`=30 s par utilisateur, admin exempté) appliqué aux commandes et callbacks qui chargent l'EPG ; un seul avertissement par fenêtre (#56)
+
 ---
 
 ## [1.11.0] - 2026-06-30

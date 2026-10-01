@@ -25,6 +25,7 @@ from analytics import compute_doublons, compute_trending
 from senders import send_soir_blocs, send_type_blocs, _SEP
 from keyboards import country_keyboard, day_keyboard, chaines_rapides_keyboard
 from logger_utils import logger
+from decorators import rate_limit
 
 def _channels(root, country: str) -> dict:
     cached = get_epg_channels(country)
@@ -111,6 +112,7 @@ async def _maintenant_sport(update: Update):
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def maintenant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args:
         if context.args[0].lower() == "sport":
@@ -158,6 +160,7 @@ async def prime(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=day_keyboard(f"prime_{pays}")
     )
 
+@rate_limit
 async def demain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("⏳ Chargement de demain soir…")
     try:
@@ -208,6 +211,7 @@ async def sport(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=day_keyboard(f"sport_{pays}")
     )
 
+@rate_limit
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filtre = context.args[0].lower() if context.args else None
     msg = await update.message.reply_text("🔴 Recherche des lives sport en cours…")
@@ -244,6 +248,7 @@ async def nouveautes(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=day_keyboard("nouveautes_day")
     )
 
+@rate_limit
 async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("📋 Chargement du résumé…")
     try:
@@ -267,6 +272,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🗓 Chargement des 5 prochains soirs…")
     try:
@@ -295,6 +301,7 @@ async def soir5(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🔁 Recherche des doublons TNT…")
     try:
@@ -320,6 +327,7 @@ async def doublons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("📈 Calcul des tendances…")
     try:
@@ -339,6 +347,7 @@ async def trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(
@@ -388,6 +397,7 @@ async def chaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+@rate_limit
 async def prochain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(
