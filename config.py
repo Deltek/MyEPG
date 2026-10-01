@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 BOT_TOKEN     = os.getenv("BOT_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
 BOT_VERSION   = "1.11.0"
+TMDB_API_KEY  = os.getenv("TMDB_API_KEY", "").strip()  # optionnel : enrichissement films (#62)
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN non défini dans l'environnement !")
@@ -17,6 +18,10 @@ CACHE_TTL        = 3600
 PAGE_SIZE        = 20
 SEARCH_PAGE_SIZE = 8
 TZ_PARIS         = ZoneInfo("Europe/Paris")
+
+# Anti-flood (#56) : max appels coûteux par utilisateur sur une fenêtre glissante
+RATE_LIMIT_MAX_CALLS = 8
+RATE_LIMIT_PERIOD    = 30  # secondes
 
 try:
     locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
