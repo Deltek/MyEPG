@@ -48,6 +48,8 @@ async def post_init(app: Application) -> None:
         BotCommand("prochain",    "Prochain programme d'une chaîne"),
         BotCommand("chaines",     "Parcourir toutes les chaînes"),
         BotCommand("recherche",   "Rechercher un programme"),
+        BotCommand("categorie",   "Programmes par catégorie (documentaire, jeunesse…)"),
+        BotCommand("semaine",     "Programme d'une chaîne sur 7 jours"),
         BotCommand("aide",        "Afficher l'aide"),
     ]
 

@@ -19,9 +19,11 @@ from epg_loader import load_epg, get_epg_channels
 from epg_query import get_programmes_for_channel
 from builders import (
     build_soir_results, build_type_results, build_sport_results,
-    build_maintenant_sport, build_prime_results, build_nuit_results, iter_progs
+    build_maintenant_sport, build_prime_results, build_nuit_results, iter_progs,
+    day_window, semaine_callback_prefix
 )
 from analytics import compute_doublons, compute_trending
+from analytics import list_categories, matching_categories, suggest_categories
 from senders import send_soir_blocs, send_type_blocs, _SEP
 from keyboards import country_keyboard, day_keyboard, chaines_rapides_keyboard
 from logger_utils import logger
@@ -38,9 +40,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🌃 *Soirée*\n"
         "/soir  /prime `[pays]`  /demain  /nuit  /soir5\n\n"
         "🎬 *Par genre*\n"
-        "/film  /series  /sport `[pays]`  /sporttnt  /nouveautes\n\n"
+        "/film  /series  /sport `[pays]`  /sporttnt  /nouveautes\n"
+        "/categorie `[type]`\n\n"
         "🔍 *Recherche*\n"
-        "/recherche `<mot>`  /chaine `<nom>`  /prochain `<nom>`  /chaines\n\n"
+        "/recherche `<mot>`  /chaine `<nom>`  /prochain `<nom>`  /chaines\n"
+        "/semaine `<nom>`\n\n"
         "📈 *Tendances*\n"
         "/trending  /doublons\n\n"
         "🌍 Pays : `fr` 🇫🇷  \\|  `gb` 🇬🇧\n"
@@ -442,6 +446,96 @@ async def prochain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.exception("Erreur handler")
         await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
+async def categorie(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/categorie [type] [pays] — sans type : catégories du jour ; avec type : choix du jour."""
+    message = update.effective_message
+    args    = list(context.args or [])
+    pays    = "fr"
+    if args and args[-1].lower() in EPG_SOURCES:
+        pays = args.pop().lower()
+    query   = " ".join(args).strip()
+    flag    = EPG_SOURCES[pays]["label"]
+    msg     = await message.reply_text("📂 Chargement des catégories…")
+    try:
+        root   = await load_epg(pays)
+        ch_set = set(CH_TNT_BY_COUNTRY.get(pays, CH_TNT_FR))
+        if not query:
+            start_utc, end_utc, jour_label = day_window(0)
+            cats = list_categories(iter_progs(root, ch_set, pays), start_utc, end_utc)
+            if not cats:
+                await msg.edit_text("❌ Aucune catégorie trouvée dans l'EPG du jour.")
+                return
+            texte = f"📂 *Catégories du jour – {flag}*\n📅 {sanitize_md(jour_label)}\n\n"
+            for label, count in cats:
+                texte += f"• {sanitize_md(label)} ×{count}\n"
+            texte += "\nEx: `/categorie documentaire`"
+            if len(texte) > 4000:
+                texte = texte[:3900].rsplit("\n", 1)[0] + "\n…\n\nEx: `/categorie documentaire`"
+            await msg.edit_text(texte, parse_mode="MarkdownV2")
+            return
+        now_utc = datetime.now(tz=timezone.utc)
+        labels  = [l for l, _ in list_categories(iter_progs(root, ch_set, pays), now_utc, now_utc + timedelta(days=7))]
+        matches = matching_categories(query, labels)
+        if not matches:
+            suggestions = suggest_categories(query, labels)
+            hint = (
+                f"\nSuggestions : {', '.join(sanitize_md(s) for s in suggestions)}"
+                if suggestions else "\nListe des catégories : /categorie"
+            )
+            await msg.edit_text(
+                f"❌ Catégorie *{sanitize_md(query)}* introuvable\\." + hint,
+                parse_mode="MarkdownV2"
+            )
+            return
+        context.user_data["cat_query"] = query
+        apercu = ", ".join(sanitize_md(m) for m in matches[:5]) + ("…" if len(matches) > 5 else "")
+        await msg.edit_text(
+            f"📂 *{sanitize_md(query)} – Quel jour ?* \\({flag}\\)\n_{apercu}_",
+            parse_mode="MarkdownV2",
+            reply_markup=day_keyboard(f"cat:{pays}")
+        )
+    except Exception as e:
+        logger.exception("Erreur /categorie")
+        await msg.edit_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
+async def semaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/semaine <chaine> — clavier 7 jours puis programmes de la chaîne pour le jour choisi."""
+    message = update.effective_message
+    if not context.args:
+        await message.reply_text(
+            "Usage : `/semaine <nom>`\nEx: `/semaine tf1`, `/semaine bbc1`",
+            parse_mode="MarkdownV2"
+        )
+        return
+    nom_saisi = " ".join(context.args)
+    cid       = get_ch_id_by_name(nom_saisi)
+    if not cid:
+        suggestions = difflib.get_close_matches(
+            nom_saisi.lower().strip(), CH_ALIASES.keys(), n=5, cutoff=0.5
+        )
+        if not suggestions:
+            suggestions = [k for k in CH_ALIASES if k.startswith(nom_saisi.lower().strip()[:2])][:5]
+        hint = (
+            f"\nSuggestions : {', '.join(sanitize_md(s) for s in suggestions)}"
+            if suggestions else "\nEx: tf1, m6, arte, bbc1…"
+        )
+        await message.reply_text(
+            f"❌ Chaîne *{sanitize_md(nom_saisi)}* introuvable\\." + hint,
+            parse_mode="MarkdownV2"
+        )
+        return
+    country = "gb" if cid.endswith(".uk") else "fr"
+    prefix  = semaine_callback_prefix(country, cid)
+    if not prefix:
+        logger.warning(f"/semaine : callback_data trop long pour {cid}")
+        await message.reply_text("❌ Chaîne non disponible pour /semaine.")
+        return
+    await message.reply_text(
+        f"🗓 *{sanitize_md(cid.rsplit('.', 1)[0])} – Quel jour ?*",
+        parse_mode="MarkdownV2",
+        reply_markup=day_keyboard(prefix)
+    )
 
 async def chaines(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(

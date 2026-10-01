@@ -18,6 +18,7 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/sporttnt`** — Sport du jour sur les chaînes TNT FR
 - **`/live [filtre]`** — Lives en cours (canal, bein, rmc...)
 - **`/nouveautes`** — Programmes inédits
+- **`/categorie [type] [pays]`** — Programmes d'une catégorie EPG sur la journée (documentaire, jeunesse, animation…) ; sans argument, liste les catégories du jour
 
 ### 📊 Résumés & Analyses
 - **`/resume`** — Résumé compact en ce moment
@@ -25,6 +26,7 @@ Un bot Telegram intelligent pour consulter les programmes TV en temps réel. Acc
 - **`/doublons`** — Programmes en doublon TNT (6h)
 - **`/trending`** — Titres tendance du jour
 - **`/chaine <nom>`** — Prochains programmes d'une chaîne (suggestions fuzzy si nom inconnu)
+- **`/semaine <nom>`** — Programme d'une chaîne jour par jour sur 7 jours
 - **`/chaines`** — Parcourir toutes les chaînes
 - **`/recherche <mot>`** — Recherche full-text (8 résultats par page)
 

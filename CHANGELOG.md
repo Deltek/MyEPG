@@ -7,6 +7,10 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `/categorie <type> [pays]` — programmes TNT d'une catégorie EPG (documentaire, jeunesse, animation…) sur la journée choisie, correspondance partielle insensible aux accents et suggestions fuzzy si inconnue ; `/categorie` seul liste les catégories de l'EPG du jour (#53)
+- `/semaine <chaine>` — clavier 7 jours puis programme complet de la chaîne pour le jour choisi (journée Europe/Paris, clavier conservé pour changer de jour) (#55)
+
 ---
 
 ## [1.11.0] - 2026-06-30

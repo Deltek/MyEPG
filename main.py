@@ -20,7 +20,7 @@ from handlers_public import (
     start, aide, maintenant, soir, prime, demain, nuit,
     film, series, sport, sporttnt, live, nouveautes,
     resume, soir5, doublons, trending, chaine, prochain, chaines, recherche,
-    get_id
+    get_id, categorie, semaine
 )
 from callbacks import (
     callback_maintenant_country, callback_maintenant_chaine,
@@ -28,7 +28,8 @@ from callbacks import (
     callback_series, callback_sport, callback_sporttnt, callback_nouveautes_day,
     callback_nouveautes, callback_list_chaines,
     callback_search_country, callback_search_page,
-    callback_prime, callback_nuit, callback_admin_logs
+    callback_prime, callback_nuit, callback_admin_logs,
+    callback_categorie, callback_semaine
 )
 from state import add_user
 
@@ -79,6 +80,8 @@ def main():
     app.add_handler(CommandHandler("prochain",   prochain))
     app.add_handler(CommandHandler("chaines",    chaines))
     app.add_handler(CommandHandler("recherche",  recherche))
+    app.add_handler(CommandHandler("categorie",  categorie))
+    app.add_handler(CommandHandler("semaine",    semaine))
     app.add_handler(CommandHandler("id",         get_id))
 
     # ── Commandes admin ────────────────────
@@ -116,6 +119,8 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_search_country,     pattern=r"^search:"))
     app.add_handler(CallbackQueryHandler(callback_search_page,        pattern=r"^search_page:"))
     app.add_handler(CallbackQueryHandler(callback_admin_logs,         pattern=r"^admin_logs:"))
+    app.add_handler(CallbackQueryHandler(callback_categorie,          pattern=r"^cat:[a-z]+:\d$"))
+    app.add_handler(CallbackQueryHandler(callback_semaine,            pattern=r"^sem:"))
 
     logger.info("Bot Programme TV démarré.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

@@ -318,6 +318,75 @@ async def callback_sporttnt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("Erreur callback")
         await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
 
+async def callback_categorie(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """cat:<pays>:<jour> — programmes TNT de la catégorie (stockée dans user_data) sur la journée."""
+    from analytics import make_category_filter
+    query = update.callback_query
+    await query.answer()
+    _, pays, day_str = query.data.split(":", 2)
+    day_offset = int(day_str)
+    cat_query  = context.user_data.get("cat_query", "")
+    if not cat_query or pays not in EPG_SOURCES:
+        await query.edit_message_text("❌ Catégorie perdue\\. Relance /categorie\\.", parse_mode="MarkdownV2")
+        return
+    await query.edit_message_text("⏳ Chargement de la catégorie…")
+    try:
+        ch_set = set(CH_TNT_BY_COUNTRY.get(pays, CH_TNT_FR))
+        root   = await load_epg(pays)
+        results, jour_label, now_utc = build_type_results(
+            root, day_offset, make_category_filter(cat_query),
+            ch_set=ch_set, country=pays, hour_start=0, hour_end=0,
+        )
+        results = [r for r in results if r["stop"] > now_utc]
+        flag    = EPG_SOURCES[pays]["label"]
+        await send_type_blocs(
+            results, jour_label, now_utc,
+            header=f"📂 *{sanitize_md(cat_query)} – {flag}* — {len(results)} programme\\(s\\)",
+            **make_fns(query),
+        )
+    except Exception as e:
+        logger.exception("Erreur callback_categorie")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
+async def callback_semaine(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """sem:<pays>:<cid>:<jour> — programmes d'une chaîne pour le jour choisi (clavier jours conservé)."""
+    from builders import build_channel_day
+    from keyboards import day_keyboard
+    query = update.callback_query
+    await query.answer()
+    _, country, rest = query.data.split(":", 2)
+    cid, day_str     = rest.rsplit(":", 1)
+    day_offset       = int(day_str)
+    if country not in EPG_SOURCES:
+        await query.edit_message_text("❌ Pays inconnu\\. Relance /semaine\\.", parse_mode="MarkdownV2")
+        return
+    await query.edit_message_text("⏳ Chargement…")
+    try:
+        root     = await load_epg(country)
+        channels = _channels(root, country)
+        nom      = clean_name(channels.get(cid, cid))
+        results, jour_label, now_utc = build_channel_day(root, cid, day_offset, country=country)
+        markup   = day_keyboard(f"sem:{country}:{cid}")
+        if not results:
+            await query.edit_message_text(
+                f"❌ Aucun programme pour *{sanitize_md(nom)}* \\({sanitize_md(jour_label)}\\)\\.",
+                parse_mode="MarkdownV2", reply_markup=markup
+            )
+            return
+        texte = f"🗓 *{sanitize_md(nom)}*\n📅 {sanitize_md(jour_label)}\n\n"
+        for p in results:
+            h_start  = p["start"].astimezone(TZ_PARIS).strftime("%H:%M")
+            h_stop   = p["stop"].astimezone(TZ_PARIS).strftime("%H:%M")
+            en_cours = "🔴 " if p["start"] <= now_utc < p["stop"] else ""
+            new_tag  = " 🆕" if p.get("new") else ""
+            texte   += f"{en_cours}{h_start}–{h_stop}  {sanitize_md(p['title'])}{new_tag}\n"
+        if len(texte) > 4000:
+            texte = texte[:4000].rsplit("\n", 1)[0] + "\n…"
+        await query.edit_message_text(texte, parse_mode="MarkdownV2", reply_markup=markup)
+    except Exception as e:
+        logger.exception("Erreur callback_semaine")
+        await query.edit_message_text("❌ Une erreur est survenue, réessaie dans quelques instants.")
+
 async def callback_admin_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from config import ADMIN_USER_ID
     from logger_utils import get_mem_handler

@@ -3,6 +3,7 @@
 # Module sans dépendance Telegram → testable isolément.
 # ============================================================
 
+import difflib
 from collections import Counter, defaultdict
 
 from config import TZ_PARIS
@@ -93,3 +94,94 @@ def paginate(items, page, page_size):
     has_prev   = page > 0
     has_next   = start + page_size < total
     return page_items, total, has_prev, has_next
+
+
+# ──────────────────────────────────────────
+# CATÉGORIES (/categorie)
+# ──────────────────────────────────────────
+def _norm_cat(s: str) -> str:
+    """Normalise un libellé/requête de catégorie (minuscule, sans accents ni ponctuation)."""
+    return _normalize(_strip_accents(s or ""))
+
+def category_matches(prog, query: str) -> bool:
+    """True si une des <category> du programme contient `query` (partiel, insensible casse/accents)."""
+    q = _norm_cat(query)
+    if not q:
+        return False
+    return any(q in _norm_cat(c.text) for c in prog.findall("category") if c.text)
+
+def make_category_filter(query: str):
+    """Retourne un filter_fn(prog) utilisable par build_type_results."""
+    return lambda prog: category_matches(prog, query)
+
+def list_categories(progs, start_utc, end_utc):
+    """Liste les catégories des programmes qui chevauchent [start_utc, end_utc).
+
+    Dédoublonnage insensible casse/accents (premier libellé rencontré conservé).
+    Retourne [(libellé, nb_programmes)] trié par nombre décroissant puis libellé.
+    """
+    counter = Counter()
+    labels  = {}
+    for prog in progs:
+        try:
+            start = parse_xmltv_time(prog.get("start", ""))
+            stop  = parse_xmltv_time(prog.get("stop",  ""))
+        except ValueError:
+            continue
+        if start >= end_utc or stop <= start_utc:
+            continue
+        seen = set()
+        for c in prog.findall("category"):
+            key = _norm_cat(c.text)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            labels.setdefault(key, c.text.strip())
+            counter[key] += 1
+    return sorted(((labels[k], n) for k, n in counter.items()), key=lambda x: (-x[1], x[0].lower()))
+
+def matching_categories(query: str, labels) -> list:
+    """Libellés contenant `query` (partiel, insensible casse/accents), dans l'ordre d'entrée."""
+    q = _norm_cat(query)
+    if not q:
+        return []
+    return [label for label in labels if q in _norm_cat(label)]
+
+def suggest_categories(query: str, labels, n: int = 5, cutoff: float = 0.5) -> list:
+    """Suggestions fuzzy (difflib) de libellés de catégories proches de `query`."""
+    by_norm = {}
+    for label in labels:
+        by_norm.setdefault(_norm_cat(label), label)
+    matches = difflib.get_close_matches(_norm_cat(query), list(by_norm), n=n, cutoff=cutoff)
+    return [by_norm[m] for m in matches]
+
+
+# ──────────────────────────────────────────
+# JOURNÉE D'UNE CHAÎNE (/semaine)
+# ──────────────────────────────────────────
+def filter_day_programmes(progs, start_utc, end_utc, now_utc=None):
+    """Programmes d'une journée [start_utc, end_utc) : débutant dans la fenêtre, ou en cours à son ouverture.
+
+    Si `now_utc` est fourni, les programmes déjà terminés sont écartés.
+    Retourne une liste de dicts triée par heure de début.
+    """
+    results = []
+    for prog in progs:
+        try:
+            start = parse_xmltv_time(prog.get("start", ""))
+            stop  = parse_xmltv_time(prog.get("stop",  ""))
+        except ValueError:
+            continue
+        if not (start_utc <= start < end_utc or start < start_utc < stop):
+            continue
+        if now_utc is not None and stop <= now_utc:
+            continue
+        title = clean_title(prog.findtext("title", default="Inconnu"))
+        desc  = prog.findtext("desc") or ""
+        results.append({
+            "start": start, "stop": stop, "title": title,
+            "desc": clean_desc(desc, title),
+            "new": prog.find("new") is not None,
+        })
+    results.sort(key=lambda x: x["start"])
+    return results
